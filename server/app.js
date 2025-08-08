@@ -25,10 +25,13 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: false })); // Parse URL-encoded payloads
 app.use(bodyParser.json()); // Parse JSON payloads
 
-// Enable CORS for all origins
 app.use(cors({
-    origin: "*"
-}))
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+}));
+
+app.options('*', cors());
 
 const PORT = process.env.PORT || 3000;
 const DB_URL = process.env.DATABASE_URL;
