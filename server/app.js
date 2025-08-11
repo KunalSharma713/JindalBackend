@@ -7,15 +7,9 @@ require("dotenv").config();
 
 
 // Importing route modules
-const userRoutes = require("../routes/AdminuserRoutes"); // Your user routes
-const MobileRoutes = require("../routes/MobileUserRoutes");
-const companyRoutes = require("../routes/AdmincompanyRoutes"); // Your user routes
-const roleRoutes = require("../routes/roleRoutes"); // Your user routes
-const ShipmentRoutes = require("../routes/ShipmentRoutes"); // Your user routes
-const TruckTypeRoutes = require("../routes/TrucksRoutes"); // Your trucks routes
-const BulkUploadRoutes = require("../routes/BulkUploadRoutes")
-const verifyToken = require('../utils/VerifyToken'); // Import the verifyToken middleware
-const dashboardRoutes = require("../routes/Dashboard"); // Your user routes
+const authRoutes = require("../routes/Auth");
+const userRoutes = require("../routes/User");
+const roleRoutes = require("../routes/Role");
 
 
 // Initialize the Express app
@@ -45,15 +39,9 @@ app.use((req, res, next) => {
 });
 
 // API route definitions
-app.use("/api/dashboard", dashboardRoutes);
-
-app.use("/api/role", verifyToken, roleRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/company", verifyToken, companyRoutes);
-app.use("/mobile", MobileRoutes)
-app.use("/shipment", verifyToken, ShipmentRoutes)
-app.use("/api/trucks", verifyToken, TruckTypeRoutes)
-app.use("/api/bulkupload", verifyToken, BulkUploadRoutes)
+app.use("/api/auth", authRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/role", roleRoutes);
 app.get('/', (req, res) => {
     res.send('Hello, This is main branch');
 });

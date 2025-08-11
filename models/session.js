@@ -3,6 +3,7 @@ const Schema = mongoose.Schema;
 
 const sessionSchema = new Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'Users', required: true },
+    refreshToken: { type: String, required: true, unique: true },
     deviceInfo: {
         deviceId: { type: String, required: true },
         deviceType: { type: String, required: true },

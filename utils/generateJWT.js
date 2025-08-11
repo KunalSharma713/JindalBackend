@@ -1,20 +1,26 @@
 const jwt = require('jsonwebtoken');
 
 // Function to generate JWT (access token)
-const generateJWT = (userId) => {
-  console.log("Generating JWT for user ID:", userId);
-
-  // Ensure JWT_SECRET and JWT_EXPIRATION are available from environment variables
+const generateJWT = (user) => {
+  // Ensure ACCESS_TOKEN_SECRET is available from environment variables
   const secretKey = process.env.JWT_SECRET;
-  const expiresIn = process.env.JWT_EXPIRATION || '60d'; // Default expiration if not set
+  const expiresIn = process.env.JWT_EXPIRATION || '15m'; // Default expiration if not set
 
   // Check if the secret is available
   if (!secretKey) {
-    throw new Error('JWT_SECRET is not set in environment variables');
+    throw new Error('ACCESS_TOKEN_SECRET is not set in environment variables');
   }
 
+  const payload = {
+      UserInfo: {
+          id: user._id,
+          username: user.username,
+          roleid: user.roleid
+      }
+  };
+
   // Generate the JWT
-  return jwt.sign({ id: userId }, secretKey, {
+  return jwt.sign(payload, secretKey, {
     expiresIn: expiresIn,
   });
 };

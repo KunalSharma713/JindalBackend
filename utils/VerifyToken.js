@@ -10,12 +10,10 @@ const verifyToken = (req, res, next) => {
     if (!token) {
         return res.status(401).json({ message: 'Access denied. No token provided.' });
     }
-
     try {
         // jwt.verify will automatically throw an error if the token is expired or invalid
         const decoded = jwt.verify(token, JWT_SECRET_KEY);
-
-        req.user = decoded; // Attach decoded payload to request
+        req.user = decoded?.UserInfo; // Attach decoded payload to request
         next(); // Proceed
     } catch (error) {
         if (error.name === 'TokenExpiredError') {
