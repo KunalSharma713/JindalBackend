@@ -10,6 +10,8 @@ require("dotenv").config();
 const authRoutes = require("../routes/Auth");
 const userRoutes = require("../routes/User");
 const roleRoutes = require("../routes/Role");
+const warehouseRoutes = require("../routes/Warehouse");
+const locationRoutes = require("../routes/Location");
 
 
 // Initialize the Express app
@@ -42,6 +44,8 @@ app.use((req, res, next) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/role", roleRoutes);
+app.use("/api/warehouse", warehouseRoutes);
+app.use("/api/location", locationRoutes);
 app.get('/', (req, res) => {
     res.send('Hello, This is main branch');
 });
