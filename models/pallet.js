@@ -52,7 +52,7 @@ palletSchema.pre('save', async function (next) {
         this.sequence = `PL-${String(this.sequenceNumber).padStart(7, '0')}`;
     }
     // 2. Update last_moved_date on creation or location change
-    if (this.isNew || this.isModified('location')) {
+    if (this.isNew) {
         this.last_moved_date = new Date();
     }
     next();
