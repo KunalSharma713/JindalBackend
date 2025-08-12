@@ -284,9 +284,50 @@ const getPickUpPallets = async (req, res) => {
 };
 
 
+const findPallet = async (req, res) => {
+    try {
+        const { barcode, sequence, id } = req.query;
+
+        let filter = null;
+
+        if (id) {
+            filter = { _id: id };
+        } else if (barcode) {
+            // Find the barcode document first
+            const palletBarcodeDoc = await PalletBarcode.findOne({ barcode_key: barcode });
+            if (!palletBarcodeDoc) {
+                return res.status(404).json({ message: 'No pallet found with the given barcode.' });
+            }
+            filter = { pallet_barcode: palletBarcodeDoc._id };
+        } else if (sequence) {
+            filter = { sequence: sequence };
+        } else {
+            return res.status(400).json({ message: 'Please provide barcode, sequence, or id as query parameter.' });
+        }
+
+        const pallet = await Pallet.findOne(filter)
+            .populate('pallet_barcode', "barcode_key _id status")
+            .populate('location', "location_name barcode_key _id");
+
+        if (!pallet) {
+            return res.status(404).json({ message: 'Pallet not found.' });
+        }
+
+        res.json({
+            message: 'Pallet retrieved successfully.',
+            data: pallet
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error while fetching pallet.', error: error.message });
+    }
+};
+
+
+
 module.exports = {
     putaway,
     getAllPallets,
     movePallets,
-    getPickUpPallets
+    getPickUpPallets,
+    findPallet
 };
