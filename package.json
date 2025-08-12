@@ -24,6 +24,7 @@
     "install": "^0.13.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.13.0",
+    "mongoose-plugin-autoinc": "^1.1.9",
     "nodemailer": "^6.10.0",
     "nodemon": "^3.1.9",
     "npm": "^11.2.0",

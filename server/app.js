@@ -13,6 +13,7 @@ const roleRoutes = require("../routes/Role");
 const warehouseRoutes = require("../routes/Warehouse");
 const locationRoutes = require("../routes/Location");
 const palletBarcodeRoutes = require("../routes/PalletBarcode");
+const palletRoutes = require("../routes/Pallet");
 
 
 // Initialize the Express app
@@ -48,6 +49,7 @@ app.use("/api/role", roleRoutes);
 app.use("/api/warehouse", warehouseRoutes);
 app.use("/api/location", locationRoutes);
 app.use("/api/pallet-barcode", palletBarcodeRoutes);
+app.use("/api/pallet", palletRoutes);
 
 app.get('/', (req, res) => {
     res.send('Hello, This is main branch');

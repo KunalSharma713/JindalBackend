@@ -1,7 +1,12 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
+const autoIncrement = require('mongoose-plugin-autoinc');
 
 const palletSchema = new Schema({
+    sequenceNumber: {
+        type: Number,
+        unique: true
+    },
     sequence: {
         type: String,
         unique: true,
@@ -32,34 +37,24 @@ const palletSchema = new Schema({
     }
 }, { timestamps: true });
 
+
+palletSchema.plugin(autoIncrement.plugin, {
+    model: 'Pallet',
+    field: 'sequenceNumber',
+    startAt: 1,
+    incrementBy: 1
+});
+
 // Pre-save hook to generate sequence and manage last_moved_date
-palletSchema.pre('save', async function(next) {
+palletSchema.pre('save', async function (next) {
     // 1. Generate the unique sequence (PL-0000001)
-    if (this.isNew) {
-        try {
-            const lastPallet = await this.constructor.findOne({}).sort({ createdAt: -1 });
-
-            let sequenceNumber = 1;
-            if (lastPallet && lastPallet.sequence) {
-                const lastSequence = parseInt(lastPallet.sequence.split('-')[1], 10);
-                if (!isNaN(lastSequence)) {
-                    sequenceNumber = lastSequence + 1;
-                }
-            }
-
-            const formattedSequence = String(sequenceNumber).padStart(7, '0');
-            this.sequence = `PL-${formattedSequence}`;
-
-        } catch (error) {
-            return next(error);
-        }
+    if (this.isNew && this.sequenceNumber != null) {
+        this.sequence = `PL-${String(this.sequenceNumber).padStart(7, '0')}`;
     }
-
     // 2. Update last_moved_date on creation or location change
     if (this.isNew || this.isModified('location')) {
         this.last_moved_date = new Date();
     }
-
     next();
 });
 
