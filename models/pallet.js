@@ -23,7 +23,7 @@ const palletSchema = new Schema({
     location: {
         type: Schema.Types.ObjectId,
         ref: 'Location',
-        required: [true, 'Location is required.']
+        // required: [true, 'Location is required.']
     },
     quantity: {
         type: Number,
