@@ -27,7 +27,7 @@ app.use(cors({
 }))
 
 const PORT = process.env.PORT || 3000;
-const DB_URL = process.env.DATABASE_URL;
+const DB_URL = process.env.MONGODB_URI;
 
 // Set CORS headers for all responses
 app.use((req, res, next) => {
