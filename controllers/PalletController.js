@@ -35,7 +35,6 @@ const putaway = async (req, res) => {
             const barcode = await PalletBarcode.findOne({ barcode_key: barcodekey }).session(session);
 
             if (!barcode) {
-                F
                 errors.push({ barcodekey, message: `Barcode '${barcodekey}' not found.` });
                 continue; // Move to the next pallet
             }
@@ -86,6 +85,67 @@ const putaway = async (req, res) => {
     }
 };
 
+
+const getAllPallets = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const skip = (page - 1) * limit;
+
+        const filter = {};
+        if (req.query.location) {
+            filter.location = req.query.location;
+        }
+        if (req.query.size) {
+            filter.size = { $regex: req.query.size, $options: 'i' };
+        }
+        if (req.query.sequence) {
+            filter.sequence = { $regex: req.query.sequence, $options: 'i' };
+        }
+        // Filter by barcode key
+        if (req.query.barcode) {
+            const palletBarcodeDoc = await PalletBarcode.findOne({ barcode_key: req.query.barcode.toUpperCase() });
+            if (palletBarcodeDoc) {
+                filter.pallet_barcode = palletBarcodeDoc._id;
+            } else {
+                return res.json({
+                    message: 'Pallets retrieved successfully.',
+                    data: [],
+                    pagination: { total: 0, page, limit, totalPages: 0 }
+                });
+            }
+        }
+
+        const sort = {};
+        if (req.query.sortBy && req.query.sortOrder) {
+            sort[req.query.sortBy] = req.query.sortOrder === 'desc' ? -1 : 1;
+        } else {
+            sort.createdAt = -1;
+        }
+
+        const pallets = await Pallet.find(filter)
+            .populate('pallet_barcode')
+            .sort(sort)
+            .skip(skip)
+            .limit(limit);
+
+        const total = await Pallet.countDocuments(filter);
+
+        res.json({
+            message: 'Pallets retrieved successfully.',
+            data: pallets,
+            pagination: { total, page, limit, totalPages: Math.ceil(total / limit) }
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error while fetching pallets.', error: error.message });
+    }
+};
+
+
+
+
+
 module.exports = {
-    putaway
+    putaway,
+    getAllPallets
 };
