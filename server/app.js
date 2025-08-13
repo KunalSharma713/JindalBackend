@@ -67,21 +67,33 @@ app.use((error, req, res, next) => {
     });
 });
 
-// Database connection
-mongoose
-    .connect(DB_URL)
-    .then(() => {
-        console.log('MongoDB connected');
-    })
-    .catch((err) => {
-        console.error("❌ Failed to connect to MongoDB", err);
-        process.exit(1);
-    });
+// MongoDB connection options with detailed explanations
+const mongooseOptions = {
+    serverSelectionTimeoutMS: 30000,  // How long to wait for server selection (finding a healthy MongoDB server) before timing out
+    connectTimeoutMS: 30000,          // How long to wait for initial connection before timing out
+    socketTimeoutMS: 30000,           // How long to wait for individual operations before timing out
+    maxPoolSize: 10                   // Maximum number of connections in the connection pool
+};
 
-// Start the server
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
+// Simple connection with retry
+const connectDB = async () => {
+    try {
+        await mongoose.connect(DB_URL, mongooseOptions);
+        console.log('✅ MongoDB connected');
+        
+        // Start server after DB connects
+        app.listen(PORT, () => {
+            console.log(`🚀 Server running on port ${PORT}`);
+        });
+    } catch (err) {
+        console.error('❌ MongoDB connection failed:', err);
+        // Retry after 5 seconds
+        setTimeout(connectDB, 5000);
+    }
+};
+
+// Initialize connection
+connectDB();
 
 // Export a handler for Vercel
 module.exports = app;
