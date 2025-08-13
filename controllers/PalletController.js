@@ -114,9 +114,7 @@ const putaway = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Putaway error:", error);
-    if (session && session.inTransaction()) {
-      await session.abortTransaction();
-    }
+    await session.abortTransaction();
     if (responseBody.status !== 200) {
       res.status(responseBody.status).json(responseBody);
     } else {
@@ -126,9 +124,7 @@ const putaway = async (req, res) => {
       });
     }
   } finally {
-    if (session) {
-      session.endSession();
-    }
+    session.endSession();
   }
 };
 
@@ -234,9 +230,8 @@ const movePallets = async (req, res) => {
   } catch (error) {
     console.error("❌ Move pallets error:", error);
     // Abort the transaction only if it's active
-    if (session && session.inTransaction()) {
-      await session.abortTransaction();
-    }
+    await session.abortTransaction();
+
     if (responseBody.status !== 200) {
       res.status(responseBody.status).json(responseBody);
     } else {
@@ -247,9 +242,8 @@ const movePallets = async (req, res) => {
     }
   } finally {
     // This block always runs, ensuring the session is ended
-    if (session) {
-      session.endSession();
-    }
+
+    session.endSession();
   }
 };
 
@@ -513,18 +507,17 @@ const pickupPallets = async (req, res) => {
   } catch (error) {
     console.error("❌ Pickup pallets error:", error);
     // Abort the transaction only if it's active
-    if (session && session.inTransaction()) {
-      await session.abortTransaction();
-    }
+
+    await session.abortTransaction();
+
     res.status(500).json({
       message: "Server error during pallet pickup.",
       error: error.message,
     });
   } finally {
     // This block always runs, ensuring the session is ended
-    if (session) {
-      session.endSession();
-    }
+
+    session.endSession();
   }
 };
 
