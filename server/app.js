@@ -1,8 +1,8 @@
 // Core modules and third-party packages
 const express = require("express");
 const bodyParser = require("body-parser");
-const mongoose = require("mongoose");
-const cors = require("cors")
+const cors = require("cors");
+const { connectDB } = require('../config/database');
 require("dotenv").config();
 
 
@@ -31,7 +31,6 @@ app.use(cors({
 }))
 
 const PORT = process.env.PORT || 3000;
-const DB_URL = process.env.MONGODB_URI;
 
 // Set CORS headers for all responses
 app.use((req, res, next) => {
@@ -67,33 +66,24 @@ app.use((error, req, res, next) => {
     });
 });
 
-// MongoDB connection options with detailed explanations
-const mongooseOptions = {
-    serverSelectionTimeoutMS: 30000,  // How long to wait for server selection (finding a healthy MongoDB server) before timing out
-    connectTimeoutMS: 30000,          // How long to wait for initial connection before timing out
-    socketTimeoutMS: 30000,           // How long to wait for individual operations before timing out
-    maxPoolSize: 10                   // Maximum number of connections in the connection pool
-};
-
-// Simple connection with retry
-const connectDB = async () => {
+// Start server function
+const startServer = async () => {
     try {
-        await mongoose.connect(DB_URL, mongooseOptions);
-        console.log('✅ MongoDB connected');
-        
-        // Start server after DB connects
+        // Connect to MongoDB first
+        await connectDB();
+
+        // Start Express server
         app.listen(PORT, () => {
             console.log(`🚀 Server running on port ${PORT}`);
         });
-    } catch (err) {
-        console.error('❌ MongoDB connection failed:', err);
-        // Retry after 5 seconds
-        setTimeout(connectDB, 5000);
+    } catch (error) {
+        console.error('Failed to start server:', error);
+        process.exit(1);
     }
 };
 
-// Initialize connection
-connectDB();
+// Initialize server
+startServer();
 
 // Export a handler for Vercel
 module.exports = app;
