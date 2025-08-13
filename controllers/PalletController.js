@@ -11,7 +11,6 @@ const putaway = async (req, res) => {
   );
 
   const { location_id, pallets } = req.body;
-
   // Basic validation
   if (
     !location_id ||
@@ -26,6 +25,7 @@ const putaway = async (req, res) => {
   }
 
   const session = await mongoose.startSession();
+  let responseBody = { message: "OK", status: 200 };
   console.log("📝 Started transaction for putaway");
   try {
     session.startTransaction();
@@ -37,10 +37,11 @@ const putaway = async (req, res) => {
     );
 
     if (!location) {
-      await session.abortTransaction();
-      return res
-        .status(404)
-        .json({ message: `Location with ID '${location_id}' not found.` });
+      responseBody = {
+        message: `Location with ID '${location_id}' not found.`,
+        status: 404,
+      };
+      throw new Error("Location not found");
     }
 
     const createdPallets = [];
@@ -95,17 +96,18 @@ const putaway = async (req, res) => {
 
     // 3. Check for errors and commit or abort the transaction
     if (errors.length > 0) {
-      await session.abortTransaction();
-      return res.status(400).json({
+      responseBody = {
         message: "Putaway failed. Some barcodes could not be processed.",
         errors,
-      });
+        status: 400,
+      };
+      throw new Error("Internal server error");
     }
 
     await session.commitTransaction();
     console.log("💾 Transaction completed successfully");
 
-    res.status(201).json({
+    res.status(200).json({
       message:
         "Putaway successful. All pallets have been created and assigned.",
       data: createdPallets,
@@ -115,10 +117,14 @@ const putaway = async (req, res) => {
     if (session && session.inTransaction()) {
       await session.abortTransaction();
     }
-    res.status(500).json({
-      message: "An unexpected server error occurred during the transaction.",
-      error: error.message,
-    });
+    if (responseBody.status !== 200) {
+      res.status(responseBody.status).json(responseBody);
+    } else {
+      res.status(500).json({
+        message: "An unexpected server error occurred during the transaction.",
+        error: error.message,
+      });
+    }
   } finally {
     if (session) {
       session.endSession();
@@ -157,7 +163,7 @@ const movePallets = async (req, res) => {
   // Start a Mongoose session
   const session = await mongoose.startSession();
   console.log("📝 Starting pallet move transaction");
-
+  let responseBody = { message: "OK", status: 200 };
   try {
     session.startTransaction();
 
@@ -168,10 +174,11 @@ const movePallets = async (req, res) => {
     ]);
 
     if (!oldLocation || !newLocation) {
-      await session.abortTransaction();
-      return res
-        .status(404)
-        .json({ message: "One or both locations not found." });
+      responseBody = {
+        message: "One or both locations not found.",
+        status: 404,
+      };
+      throw new Error("Internal server error");
     }
     console.log(
       "📍 Locations verified - Old:",
@@ -191,10 +198,11 @@ const movePallets = async (req, res) => {
       }).session(session);
 
       if (!palletBarcode) {
-        await session.abortTransaction();
-        return res.status(404).json({
+        responseBody = {
           message: `Pallet barcode with ID '${barcodeId}' not found.`,
-        });
+          status: 404,
+        };
+        throw new Error("Internal server error");
       }
 
       // Find the pallet and ensure it's in the correct old location
@@ -204,10 +212,11 @@ const movePallets = async (req, res) => {
       }).session(session);
 
       if (!pallet) {
-        await session.abortTransaction();
-        return res.status(404).json({
+        responseBody = {
           message: `Pallet with barcode '${barcodeId}' not found in the old location.`,
-        });
+          status: 404,
+        };
+        throw new Error("Internal server error");
       }
 
       // Update the pallet's location and save it within the session
@@ -228,10 +237,14 @@ const movePallets = async (req, res) => {
     if (session && session.inTransaction()) {
       await session.abortTransaction();
     }
-    res.status(500).json({
-      message: "Server error during pallet move.",
-      error: error.message,
-    });
+    if (responseBody.status !== 200) {
+      res.status(responseBody.status).json(responseBody);
+    } else {
+      res.status(500).json({
+        message: "Server error during pallet move.",
+        error: error.message,
+      });
+    }
   } finally {
     // This block always runs, ensuring the session is ended
     if (session) {
@@ -428,7 +441,7 @@ const pickupPallets = async (req, res) => {
 
   const session = await mongoose.startSession();
   console.log("📝 Starting pickup transaction");
-
+  let responseBody = { message: "OK", status: 200 };
   try {
     session.startTransaction();
 
