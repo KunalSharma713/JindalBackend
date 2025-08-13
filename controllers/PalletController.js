@@ -64,7 +64,7 @@ const putaway = async (req, res) => {
 
       // Create the new pallet
       const newPallet = new Pallet({
-        size :size.toLowerCase(), 
+        size: size.toLowerCase(),
         quantity,
         location: location_id,
         pallet_barcode: barcode._id,
@@ -207,7 +207,7 @@ const getAllPallets = async (req, res) => {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
     const skip = (page - 1) * limit;
-
+    const barcodeStatus = req.query.status || "all";
     const filter = {};
     if (req.query.location) {
       filter.location = req.query.location;
@@ -218,11 +218,19 @@ const getAllPallets = async (req, res) => {
     if (req.query.sequence) {
       filter.sequence = { $regex: req.query.sequence, $options: "i" };
     }
+
+    if (barcodeStatus && barcodeStatus.toLowerCase() !== "all") {
+      if (barcodeStatus.toLowerCase() === "assigned") {
+        filter.location = { $ne: null }; // only pallets with a location
+      } else if (barcodeStatus.toLowerCase() === "used") {
+        filter.location = null; 
+      }
+    }
     // Filter by barcode key
     if (req.query.barcode) {
-      const palletBarcodeDoc = await PalletBarcode.findOne({
-        barcode_key: req.query.barcode.toUpperCase(),
-      });
+      let barCodeQuery = { barcode_key: req.query.barcode.toUpperCase() };
+
+      const palletBarcodeDoc = await PalletBarcode.findOne(barCodeQuery);
       if (palletBarcodeDoc) {
         filter.pallet_barcode = palletBarcodeDoc._id;
       } else {
