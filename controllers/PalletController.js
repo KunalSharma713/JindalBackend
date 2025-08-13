@@ -39,7 +39,7 @@ const putaway = async (req, res) => {
 
     // 2. Process each pallet in the array
     for (const p of pallets) {
-      const { barcodekey, size = "1X1", quantity = 1 } = p;
+      const { barcodekey, size = "1x1", quantity = 1 } = p;
 
       // Find the barcode
       const barcode = await PalletBarcode.findOne({
@@ -64,7 +64,7 @@ const putaway = async (req, res) => {
 
       // Create the new pallet
       const newPallet = new Pallet({
-        size,
+        size.toLowerCase(), 
         quantity,
         location: location_id,
         pallet_barcode: barcode._id,
@@ -213,7 +213,7 @@ const getAllPallets = async (req, res) => {
       filter.location = req.query.location;
     }
     if (req.query.size) {
-      filter.size = { $regex: req.query.size, $options: "i" };
+      filter.size = { $regex: req.query.size.toLowerCase(), $options: "i" };
     }
     if (req.query.sequence) {
       filter.sequence = { $regex: req.query.sequence, $options: "i" };
@@ -289,7 +289,7 @@ const getPickUpPallets = async (req, res) => {
       // Filter pallets by size before grouping
       {
         $match: {
-          size: size,
+          size: size.toLowerCase(),
         },
       },
       {
