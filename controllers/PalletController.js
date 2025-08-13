@@ -240,7 +240,7 @@ const getAllPallets = async (req, res) => {
       filter.sequence = { $regex: req.query.sequence, $options: "i" };
     }
 
-    if (barcodeStatus && barcodeStatus.toLowerCase() !== "all") {
+    if (barcodeStatus && barcodeStatus.toLowerCase() !== "all" && !req?.query?.location) {
       if (barcodeStatus.toLowerCase() === "assigned") {
         filter.location = { $ne: null }; // only pallets with a location
       } else if (barcodeStatus.toLowerCase() === "used") {
