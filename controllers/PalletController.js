@@ -27,97 +27,96 @@ const putaway = async (req, res) => {
   const session = await mongoose.startSession();
   let responseBody = { message: "OK", status: 200 };
   console.log("📝 Started transaction for putaway");
+
   try {
-    session.startTransaction();
-
-    const location = await Location.findById(location_id).session(session);
-    console.log(
-      "📍 Location found:",
-      location ? location.location_name : "Not found"
-    );
-
-    if (!location) {
-      responseBody = {
-        message: `Location with ID '${location_id}' not found.`,
-        status: 404,
-      };
-      throw new Error("Location not found");
-    }
-
-    const createdPallets = [];
-    const errors = [];
-
-    // 2. Process each pallet in the array
-    for (const p of pallets) {
-      const { barcodekey, size = "1x1", quantity = 1 } = p;
-      console.log("📦 Processing pallet:", p);
-
-      // Find the barcode
-      const barcode = await PalletBarcode.findOne({
-        barcode_key: barcodekey,
-      }).session(session);
+    await session.withTransaction(async () => {
+      const location = await Location.findById(location_id).session(session);
       console.log(
-        "🏷️ Barcode found:",
-        barcode ? barcode.barcode_key : "Not found"
+        "📍 Location found:",
+        location ? location.location_name : "Not found"
       );
 
-      if (!barcode) {
-        errors.push({
-          barcodekey,
-          message: `Barcode '${barcodekey}' not found.`,
-        });
-        continue; // Move to the next pallet
+      if (!location) {
+        responseBody = {
+          message: `Location with ID '${location_id}' not found.`,
+          status: 404,
+        };
+        throw new Error("Location not found");
       }
 
-      if (barcode.status !== "new") {
-        errors.push({
-          barcodekey,
-          message: `Barcode '${barcodekey}' is already '${barcode.status}' and cannot be used.`,
+      const createdPallets = [];
+      const errors = [];
+
+      // 2. Process each pallet in the array
+      for (const p of pallets) {
+        const { barcodekey, size = "1x1", quantity = 1 } = p;
+        console.log("📦 Processing pallet:", p);
+
+        // Find the barcode
+        const barcode = await PalletBarcode.findOne({
+          barcode_key: barcodekey,
+        }).session(session);
+        console.log(
+          "🏷️ Barcode found:",
+          barcode ? barcode.barcode_key : "Not found"
+        );
+
+        if (!barcode) {
+          errors.push({
+            barcodekey,
+            message: `Barcode '${barcodekey}' not found.`,
+          });
+          continue; // Move to the next pallet
+        }
+
+        if (barcode.status !== "new") {
+          errors.push({
+            barcodekey,
+            message: `Barcode '${barcodekey}' is already '${barcode.status}' and cannot be used.`,
+          });
+          continue; // Move to the next pallet
+        }
+
+        // Create the new pallet
+        const newPallet = new Pallet({
+          size: size.toLowerCase(),
+          quantity,
+          location: location_id,
+          pallet_barcode: barcode._id,
         });
-        continue; // Move to the next pallet
+        const savedPallet = await newPallet.save({ session });
+        console.log("✅ Pallet created:", savedPallet._id);
+
+        // Update the barcode's status
+        barcode.status = "assigned";
+        await barcode.save({ session });
+
+        createdPallets.push(savedPallet);
       }
 
-      // Create the new pallet
-      const newPallet = new Pallet({
-        size: size.toLowerCase(),
-        quantity,
-        location: location_id,
-        pallet_barcode: barcode._id,
+      // 3. Check for errors and conditionally abort the transaction
+      if (errors.length > 0) {
+        responseBody = {
+          message: "Putaway failed. Some barcodes could not be processed.",
+          errors,
+          status: 400,
+        };
+        throw new Error("Internal server error");
+      }
+
+      console.log("💾 Transaction completed successfully");
+
+      res.status(200).json({
+        message:
+          "Putaway successful. All pallets have been created and assigned.",
+        data: createdPallets,
       });
-      const savedPallet = await newPallet.save({ session });
-      console.log("✅ Pallet created:", savedPallet._id);
-
-      // Update the barcode's status
-      barcode.status = "assigned";
-      await barcode.save({ session });
-
-      createdPallets.push(savedPallet);
-    }
-
-    // 3. Check for errors and commit or abort the transaction
-    if (errors.length > 0) {
-      responseBody = {
-        message: "Putaway failed. Some barcodes could not be processed.",
-        errors,
-        status: 400,
-      };
-      throw new Error("Internal server error");
-    }
-
-    await session.commitTransaction();
-    console.log("💾 Transaction completed successfully");
-
-    res.status(200).json({
-      message:
-        "Putaway successful. All pallets have been created and assigned.",
-      data: createdPallets,
     });
   } catch (error) {
     console.error("❌ Putaway error:", error);
-    await session.abortTransaction();
-    if (responseBody.status !== 200) {
+    if (responseBody.status !== 200 && !res.headersSent) {
       res.status(responseBody.status).json(responseBody);
-    } else {
+    } else if (!res.headersSent) {
       res.status(500).json({
         message: "An unexpected server error occurred during the transaction.",
         error: error.message,
@@ -127,6 +126,7 @@ const putaway = async (req, res) => {
     session.endSession();
   }
 };
+
 
 const movePallets = async (req, res) => {
   console.log(
@@ -160,92 +160,87 @@ const movePallets = async (req, res) => {
   const session = await mongoose.startSession();
   console.log("📝 Starting pallet move transaction");
   let responseBody = { message: "OK", status: 200 };
+
   try {
-    session.startTransaction();
+    await session.withTransaction(async () => {
+      // Verify locations exist within the transaction
+      const [oldLocation, newLocation] = await Promise.all([
+        Location.findById(old_location).session(session),
+        Location.findById(new_location).session(session),
+      ]);
 
-    // Verify locations exist within the transaction
-    const [oldLocation, newLocation] = await Promise.all([
-      Location.findById(old_location).session(session),
-      Location.findById(new_location).session(session),
-    ]);
-
-    if (!oldLocation || !newLocation) {
-      responseBody = {
-        message: "One or both locations not found.",
-        status: 404,
-      };
-      throw new Error("Internal server error");
-    }
-    console.log(
-      "📍 Locations verified - Old:",
-      oldLocation?.location_name,
-      "New:",
-      newLocation?.location_name
-    );
-
-    const uniquePallets = [...new Set(pallets)];
-
-    // Use a simple for...of loop for sequential processing.
-    for (const barcodeId of uniquePallets) {
-      console.log("🏷️ Processing barcode:", barcodeId);
-
-      const palletBarcode = await PalletBarcode.findOne({
-        barcode_key: barcodeId,
-      }).session(session);
-
-      if (!palletBarcode) {
+      if (!oldLocation || !newLocation) {
         responseBody = {
-          message: `Pallet barcode with ID '${barcodeId}' not found.`,
+          message: "One or both locations not found.",
           status: 404,
         };
         throw new Error("Internal server error");
       }
 
-      // Find the pallet and ensure it's in the correct old location
-      const pallet = await Pallet.findOne({
-        pallet_barcode: palletBarcode._id,
-        location: old_location,
-      }).session(session);
+      console.log(
+        "📍 Locations verified - Old:",
+        oldLocation?.location_name,
+        "New:",
+        newLocation?.location_name
+      );
 
-      if (!pallet) {
-        responseBody = {
-          message: `Pallet with barcode '${barcodeId}' not found in the old location.`,
-          status: 404,
-        };
-        throw new Error("Internal server error");
+      const uniquePallets = [...new Set(pallets)];
+
+      for (const barcodeId of uniquePallets) {
+        console.log("🏷️ Processing barcode:", barcodeId);
+
+        const palletBarcode = await PalletBarcode.findOne({
+          barcode_key: barcodeId,
+        }).session(session);
+
+        if (!palletBarcode) {
+          responseBody = {
+            message: `Pallet barcode with ID '${barcodeId}' not found.`,
+            status: 404,
+          };
+          throw new Error("Internal server error");
+        }
+
+        const pallet = await Pallet.findOne({
+          pallet_barcode: palletBarcode._id,
+          location: old_location,
+        }).session(session);
+
+        if (!pallet) {
+          responseBody = {
+            message: `Pallet with barcode '${barcodeId}' not found in the old location.`,
+            status: 404,
+          };
+          throw new Error("Internal server error");
+        }
+
+        pallet.location = new_location;
+        pallet.last_moved_date = new Date();
+        await pallet.save({ session });
+
+        console.log("✅ Pallet moved successfully:", pallet._id);
       }
 
-      // Update the pallet's location and save it within the session
-      pallet.location = new_location;
-      pallet.last_moved_date = new Date();
-      await pallet.save({ session });
-      console.log("✅ Pallet moved successfully:", pallet._id);
-    }
+      console.log("💾 Move transaction completed successfully");
 
-    // All operations succeeded, commit the transaction
-    await session.commitTransaction();
-    console.log("💾 Move transaction completed successfully");
-
-    res.status(200).json({ message: "Pallets moved successfully." });
+      res.status(200).json({ message: "Pallets moved successfully." });
+    });
   } catch (error) {
     console.error("❌ Move pallets error:", error);
-    // Abort the transaction only if it's active
-    await session.abortTransaction();
 
-    if (responseBody.status !== 200) {
+    if (responseBody.status !== 200 && !res.headersSent) {
       res.status(responseBody.status).json(responseBody);
-    } else {
+    } else if (!res.headersSent) {
       res.status(500).json({
         message: "Server error during pallet move.",
         error: error.message,
       });
     }
   } finally {
-    // This block always runs, ensuring the session is ended
-
     session.endSession();
   }
 };
+
 
 const getAllPallets = async (req, res) => {
   console.log("📋 Get All Pallets API called with query:", req.query);
@@ -435,91 +430,85 @@ const pickupPallets = async (req, res) => {
 
   const session = await mongoose.startSession();
   console.log("📝 Starting pickup transaction");
-  let responseBody = { message: "OK", status: 200 };
+
   try {
-    session.startTransaction();
-
-    const updatePromises = pallets.map(async ({ quantity, barcode }) => {
-      console.log(
-        `🏷️ Processing pickup - Barcode: ${barcode}, Quantity: ${quantity}`
-      );
-
-      if (!quantity || !barcode) {
-        throw new Error(`Missing quantity or barcode for a pallet.`);
-      }
-
-      // Find the pallet barcode document
-      const palletBarcodeDoc = await PalletBarcode.findOne({
-        barcode_key: barcode,
-      }).session(session);
-      if (!palletBarcodeDoc) {
-        throw new Error(`Pallet barcode '${barcode}' not found.`);
-      }
-
-      // Define the updates for the pallet
-      const update = {
-        $inc: { quantity: -quantity }, // Atomically decrease the quantity
-        $set: { last_moved_date: new Date() }, // Update the move date
-      };
-
-      // Find the pallet and atomically update it
-      const pallet = await Pallet.findOneAndUpdate(
-        {
-          pallet_barcode: palletBarcodeDoc._id,
-          quantity: { $gte: quantity }, // Ensure enough quantity exists
-        },
-        update,
-        { new: true, session }
-      );
-
-      if (!pallet) {
-        throw new Error(
-          `Pallet with barcode '${barcode}' not found or has insufficient quantity.`
-        );
-      }
-      console.log("✅ Pallet picked successfully:", pallet._id);
-
-      // Check if quantity became zero after the update
-      if (pallet.quantity <= 0) {
-        // Remove location linking and update barcode status
-        await Pallet.updateOne(
-          { _id: pallet._id },
-          { $set: { location: null } },
-          { session }
+    await session.withTransaction(async () => {
+      const updatePromises = pallets.map(async ({ quantity, barcode }) => {
+        console.log(
+          `🏷️ Processing pickup - Barcode: ${barcode}, Quantity: ${quantity}`
         );
 
-        await PalletBarcode.updateOne(
-          { _id: palletBarcodeDoc._id },
-          { $set: { status: "used" } },
-          { session }
+        if (!quantity || !barcode) {
+          throw new Error(`Missing quantity or barcode for a pallet.`);
+        }
+
+        const palletBarcodeDoc = await PalletBarcode.findOne({
+          barcode_key: barcode,
+        }).session(session);
+
+        if (!palletBarcodeDoc) {
+          throw new Error(`Pallet barcode '${barcode}' not found.`);
+        }
+
+        const update = {
+          $inc: { quantity: -quantity },
+          $set: { last_moved_date: new Date() },
+        };
+
+        const pallet = await Pallet.findOneAndUpdate(
+          {
+            pallet_barcode: palletBarcodeDoc._id,
+            quantity: { $gte: quantity },
+          },
+          update,
+          { new: true, session }
         );
-      }
-    });
 
-    await Promise.all(updatePromises);
+        if (!pallet) {
+          throw new Error(
+            `Pallet with barcode '${barcode}' not found or has insufficient quantity.`
+          );
+        }
 
-    await session.commitTransaction();
-    console.log("💾 Pickup transaction completed successfully");
+        console.log("✅ Pallet picked successfully:", pallet._id);
 
-    res.status(200).json({
-      message: "Pallets picked up and quantities updated successfully.",
+        if (pallet.quantity <= 0) {
+          await Pallet.updateOne(
+            { _id: pallet._id },
+            { $set: { location: null } },
+            { session }
+          );
+
+          await PalletBarcode.updateOne(
+            { _id: palletBarcodeDoc._id },
+            { $set: { status: "used" } },
+            { session }
+          );
+        }
+      });
+
+      await Promise.all(updatePromises);
+
+      console.log("💾 Pickup transaction completed successfully");
+
+      res.status(200).json({
+        message: "Pallets picked up and quantities updated successfully.",
+      });
     });
   } catch (error) {
     console.error("❌ Pickup pallets error:", error);
-    // Abort the transaction only if it's active
 
-    await session.abortTransaction();
-
-    res.status(500).json({
-      message: "Server error during pallet pickup.",
-      error: error.message,
-    });
+    if (!res.headersSent) {
+      res.status(500).json({
+        message: "Server error during pallet pickup.",
+        error: error.message,
+      });
+    }
   } finally {
-    // This block always runs, ensuring the session is ended
-
     session.endSession();
   }
 };
+
 
 const findPallet = async (req, res) => {
   console.log("🔍 Find Pallet API called with query:", req.query);
