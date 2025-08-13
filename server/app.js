@@ -14,6 +14,8 @@ const warehouseRoutes = require("../routes/Warehouse");
 const locationRoutes = require("../routes/Location");
 const palletBarcodeRoutes = require("../routes/PalletBarcode");
 const palletRoutes = require("../routes/Pallet");
+const barcodePrintRoutes = require('../routes/BarcodePrint');
+
 
 
 // Initialize the Express app
@@ -50,7 +52,7 @@ app.use("/api/warehouse", warehouseRoutes);
 app.use("/api/location", locationRoutes);
 app.use("/api/pallet-barcode", palletBarcodeRoutes);
 app.use("/api/pallet", palletRoutes);
-
+app.use('/api/barcode-print', barcodePrintRoutes);
 app.get('/', (req, res) => {
     res.send('Hello, This is main branch');
 });
