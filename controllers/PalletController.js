@@ -5,8 +5,11 @@ const Location = require("../models/location");
 
 // Perform a bulk putaway of pallets
 const putaway = async (req, res) => {
-  console.log('🚀 Putaway API called with body:', JSON.stringify(req.body, null, 2));
-  
+  console.log(
+    "🚀 Putaway API called with body:",
+    JSON.stringify(req.body, null, 2)
+  );
+
   const { location_id, pallets } = req.body;
 
   // Basic validation
@@ -23,17 +26,18 @@ const putaway = async (req, res) => {
   }
 
   const session = await mongoose.startSession();
-  session.startTransaction();
-  console.log('📝 Started transaction for putaway');
-
+  console.log("📝 Started transaction for putaway");
   try {
-    // 1. Validate the location
+    session.startTransaction();
+
     const location = await Location.findById(location_id).session(session);
-    console.log('📍 Location found:', location ? location.location_name : 'Not found');
+    console.log(
+      "📍 Location found:",
+      location ? location.location_name : "Not found"
+    );
 
     if (!location) {
       await session.abortTransaction();
-      session.endSession();
       return res
         .status(404)
         .json({ message: `Location with ID '${location_id}' not found.` });
@@ -45,13 +49,16 @@ const putaway = async (req, res) => {
     // 2. Process each pallet in the array
     for (const p of pallets) {
       const { barcodekey, size = "1x1", quantity = 1 } = p;
-      console.log('📦 Processing pallet:', p);
-      
+      console.log("📦 Processing pallet:", p);
+
       // Find the barcode
       const barcode = await PalletBarcode.findOne({
         barcode_key: barcodekey,
       }).session(session);
-      console.log('🏷️ Barcode found:', barcode ? barcode.barcode_key : 'Not found');
+      console.log(
+        "🏷️ Barcode found:",
+        barcode ? barcode.barcode_key : "Not found"
+      );
 
       if (!barcode) {
         errors.push({
@@ -77,7 +84,7 @@ const putaway = async (req, res) => {
         pallet_barcode: barcode._id,
       });
       const savedPallet = await newPallet.save({ session });
-      console.log('✅ Pallet created:', savedPallet._id);
+      console.log("✅ Pallet created:", savedPallet._id);
 
       // Update the barcode's status
       barcode.status = "assigned";
@@ -89,7 +96,6 @@ const putaway = async (req, res) => {
     // 3. Check for errors and commit or abort the transaction
     if (errors.length > 0) {
       await session.abortTransaction();
-      session.endSession();
       return res.status(400).json({
         message: "Putaway failed. Some barcodes could not be processed.",
         errors,
@@ -97,8 +103,7 @@ const putaway = async (req, res) => {
     }
 
     await session.commitTransaction();
-    session.endSession();
-    console.log('💾 Transaction completed successfully');
+    console.log("💾 Transaction completed successfully");
 
     res.status(201).json({
       message:
@@ -106,19 +111,27 @@ const putaway = async (req, res) => {
       data: createdPallets,
     });
   } catch (error) {
-    console.error('❌ Putaway error:', error);
-    await session.abortTransaction();
-    session.endSession();
+    console.error("❌ Putaway error:", error);
+    if (session && session.inTransaction()) {
+      await session.abortTransaction();
+    }
     res.status(500).json({
       message: "An unexpected server error occurred during the transaction.",
       error: error.message,
     });
+  } finally {
+    if (session) {
+      session.endSession();
+    }
   }
 };
 
 const movePallets = async (req, res) => {
-  console.log('🚚 Move Pallets API called with body:', JSON.stringify(req.body, null, 2));
-  
+  console.log(
+    "🚚 Move Pallets API called with body:",
+    JSON.stringify(req.body, null, 2)
+  );
+
   const { old_location, new_location, pallets } = req.body;
 
   // Validation checks (These are good, so we'll keep them)
@@ -143,10 +156,11 @@ const movePallets = async (req, res) => {
 
   // Start a Mongoose session
   const session = await mongoose.startSession();
-  session.startTransaction();
-  console.log('📝 Starting pallet move transaction');
+  console.log("📝 Starting pallet move transaction");
 
   try {
+    session.startTransaction();
+
     // Verify locations exist within the transaction
     const [oldLocation, newLocation] = await Promise.all([
       Location.findById(old_location).session(session),
@@ -155,28 +169,29 @@ const movePallets = async (req, res) => {
 
     if (!oldLocation || !newLocation) {
       await session.abortTransaction();
-      session.endSession();
       return res
         .status(404)
         .json({ message: "One or both locations not found." });
     }
-    console.log('📍 Locations verified - Old:', oldLocation?.location_name, 'New:', newLocation?.location_name);
+    console.log(
+      "📍 Locations verified - Old:",
+      oldLocation?.location_name,
+      "New:",
+      newLocation?.location_name
+    );
 
     const uniquePallets = [...new Set(pallets)];
 
     // Use a simple for...of loop for sequential processing.
-    // This is not the most performant, but it's what your original code used and it ensures
-    // the session context is maintained correctly for each step.
     for (const barcodeId of uniquePallets) {
-      console.log('🏷️ Processing barcode:', barcodeId);
-      
+      console.log("🏷️ Processing barcode:", barcodeId);
+
       const palletBarcode = await PalletBarcode.findOne({
         barcode_key: barcodeId,
       }).session(session);
 
       if (!palletBarcode) {
         await session.abortTransaction();
-        session.endSession();
         return res.status(404).json({
           message: `Pallet barcode with ID '${barcodeId}' not found.`,
         });
@@ -190,7 +205,6 @@ const movePallets = async (req, res) => {
 
       if (!pallet) {
         await session.abortTransaction();
-        session.endSession();
         return res.status(404).json({
           message: `Pallet with barcode '${barcodeId}' not found in the old location.`,
         });
@@ -200,30 +214,35 @@ const movePallets = async (req, res) => {
       pallet.location = new_location;
       pallet.last_moved_date = new Date();
       await pallet.save({ session });
-      console.log('✅ Pallet moved successfully:', pallet._id);
+      console.log("✅ Pallet moved successfully:", pallet._id);
     }
 
     // All operations succeeded, commit the transaction
     await session.commitTransaction();
-    session.endSession();
-    console.log('💾 Move transaction completed successfully');
+    console.log("💾 Move transaction completed successfully");
 
     res.status(200).json({ message: "Pallets moved successfully." });
   } catch (error) {
-    console.error('❌ Move pallets error:', error);
-    // Abort the transaction on any error
-    await session.abortTransaction();
-    session.endSession();
+    console.error("❌ Move pallets error:", error);
+    // Abort the transaction only if it's active
+    if (session && session.inTransaction()) {
+      await session.abortTransaction();
+    }
     res.status(500).json({
       message: "Server error during pallet move.",
       error: error.message,
     });
+  } finally {
+    // This block always runs, ensuring the session is ended
+    if (session) {
+      session.endSession();
+    }
   }
 };
 
 const getAllPallets = async (req, res) => {
-  console.log('📋 Get All Pallets API called with query:', req.query);
-  
+  console.log("📋 Get All Pallets API called with query:", req.query);
+
   try {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
@@ -240,11 +259,15 @@ const getAllPallets = async (req, res) => {
       filter.sequence = { $regex: req.query.sequence, $options: "i" };
     }
 
-    if (barcodeStatus && barcodeStatus.toLowerCase() !== "all" && !req?.query?.location) {
+    if (
+      barcodeStatus &&
+      barcodeStatus.toLowerCase() !== "all" &&
+      !req?.query?.location
+    ) {
       if (barcodeStatus.toLowerCase() === "assigned") {
         filter.location = { $ne: null }; // only pallets with a location
       } else if (barcodeStatus.toLowerCase() === "used") {
-        filter.location = null; 
+        filter.location = null;
       }
     }
     // Filter by barcode key
@@ -270,7 +293,7 @@ const getAllPallets = async (req, res) => {
       sort.createdAt = -1;
     }
 
-    console.log('🔍 Applied filters:', JSON.stringify(filter, null, 2));
+    console.log("🔍 Applied filters:", JSON.stringify(filter, null, 2));
     const pallets = await Pallet.find(filter)
       .populate("pallet_barcode", "barcode_key _id status")
       .populate("location", "location_name barcode_key _id")
@@ -287,7 +310,7 @@ const getAllPallets = async (req, res) => {
       pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
     });
   } catch (error) {
-    console.error('❌ Get all pallets error:', error);
+    console.error("❌ Get all pallets error:", error);
     res.status(500).json({
       message: "Server error while fetching pallets.",
       error: error.message,
@@ -296,8 +319,8 @@ const getAllPallets = async (req, res) => {
 };
 
 const getPickUpPallets = async (req, res) => {
-  console.log('🔍 Get Pickup Pallets API called with query:', req.query);
-  
+  console.log("🔍 Get Pickup Pallets API called with query:", req.query);
+
   try {
     const { size } = req.query;
     if (!size) {
@@ -305,7 +328,7 @@ const getPickUpPallets = async (req, res) => {
         message: "Size parameter is required to fetch pallets.",
       });
     }
-    console.log('📏 Filtering by size:', size);
+    console.log("📏 Filtering by size:", size);
 
     const palletsByLocation = await Pallet.aggregate([
       {
@@ -379,7 +402,7 @@ const getPickUpPallets = async (req, res) => {
       data: palletsByLocation,
     });
   } catch (error) {
-    console.error('❌ Get pickup pallets error:', error);
+    console.error("❌ Get pickup pallets error:", error);
     res.status(500).json({
       message: "Server error while fetching pallets.",
       error: error.message,
@@ -388,8 +411,11 @@ const getPickUpPallets = async (req, res) => {
 };
 
 const pickupPallets = async (req, res) => {
-  console.log('📤 Pickup Pallets API called with body:', JSON.stringify(req.body, null, 2));
-  
+  console.log(
+    "📤 Pickup Pallets API called with body:",
+    JSON.stringify(req.body, null, 2)
+  );
+
   const { pallets } = req.body;
 
   // Validate the request body
@@ -400,14 +426,17 @@ const pickupPallets = async (req, res) => {
     });
   }
 
-  console.log('📝 Starting pickup transaction');
   const session = await mongoose.startSession();
-  session.startTransaction();
+  console.log("📝 Starting pickup transaction");
 
   try {
+    session.startTransaction();
+
     const updatePromises = pallets.map(async ({ quantity, barcode }) => {
-      console.log(`🏷️ Processing pickup - Barcode: ${barcode}, Quantity: ${quantity}`);
-      
+      console.log(
+        `🏷️ Processing pickup - Barcode: ${barcode}, Quantity: ${quantity}`
+      );
+
       if (!quantity || !barcode) {
         throw new Error(`Missing quantity or barcode for a pallet.`);
       }
@@ -441,7 +470,7 @@ const pickupPallets = async (req, res) => {
           `Pallet with barcode '${barcode}' not found or has insufficient quantity.`
         );
       }
-      console.log('✅ Pallet picked successfully:', pallet._id);
+      console.log("✅ Pallet picked successfully:", pallet._id);
 
       // Check if quantity became zero after the update
       if (pallet.quantity <= 0) {
@@ -463,26 +492,32 @@ const pickupPallets = async (req, res) => {
     await Promise.all(updatePromises);
 
     await session.commitTransaction();
-    session.endSession();
-    console.log('💾 Pickup transaction completed successfully');
+    console.log("💾 Pickup transaction completed successfully");
 
     res.status(200).json({
       message: "Pallets picked up and quantities updated successfully.",
     });
   } catch (error) {
-    console.error('❌ Pickup pallets error:', error);
-    await session.abortTransaction();
-    session.endSession();
+    console.error("❌ Pickup pallets error:", error);
+    // Abort the transaction only if it's active
+    if (session && session.inTransaction()) {
+      await session.abortTransaction();
+    }
     res.status(500).json({
       message: "Server error during pallet pickup.",
       error: error.message,
     });
+  } finally {
+    // This block always runs, ensuring the session is ended
+    if (session) {
+      session.endSession();
+    }
   }
 };
 
 const findPallet = async (req, res) => {
-  console.log('🔍 Find Pallet API called with query:', req.query);
-  
+  console.log("🔍 Find Pallet API called with query:", req.query);
+
   try {
     const { barcode, sequence, id } = req.query;
 
@@ -508,7 +543,7 @@ const findPallet = async (req, res) => {
         message: "Please provide barcode, sequence, or id as query parameter.",
       });
     }
-    console.log('🔍 Searching with filter:', filter);
+    console.log("🔍 Searching with filter:", filter);
 
     const pallet = await Pallet.findOne(filter)
       .populate("pallet_barcode", "barcode_key _id status")
@@ -517,14 +552,14 @@ const findPallet = async (req, res) => {
     if (!pallet) {
       return res.status(404).json({ message: "Pallet not found." });
     }
-    console.log('📦 Pallet found:', pallet ? pallet._id : 'Not found');
+    console.log("📦 Pallet found:", pallet ? pallet._id : "Not found");
 
     res.json({
       message: "Pallet retrieved successfully.",
       data: pallet,
     });
   } catch (error) {
-    console.error('❌ Find pallet error:', error);
+    console.error("❌ Find pallet error:", error);
     res.status(500).json({
       message: "Server error while fetching pallet.",
       error: error.message,
