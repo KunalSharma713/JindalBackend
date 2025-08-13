@@ -64,7 +64,7 @@ const putaway = async (req, res) => {
 
       // Create the new pallet
       const newPallet = new Pallet({
-        size.toLowerCase(), 
+        size :size.toLowerCase(), 
         quantity,
         location: location_id,
         pallet_barcode: barcode._id,
