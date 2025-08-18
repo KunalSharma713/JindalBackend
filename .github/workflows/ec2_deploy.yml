@@ -1,0 +1,61 @@
+name: Deploy to EC2
+
+on:
+  workflow_dispatch:  # manual trigger only
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e  # exit on error
+            echo "=========================================="
+            echo "[DEPLOYMENT STARTED] $(date)"
+            echo "=========================================="
+
+            PROJECT_DIR=~/pallet_pickup_production/Store-Plate-backend
+
+            if [ -d "$PROJECT_DIR/.git" ]; then
+              echo "[INFO] Pulling latest code..."
+              cd $PROJECT_DIR
+              git reset --hard
+              git pull origin main || { echo "[ERROR] Git pull failed"; exit 1; }
+            else
+              echo "[ERROR] $PROJECT_DIR is not a valid git repository"
+              exit 1
+            fi
+
+            echo "[INFO] Updating environment file..."
+            if [ -f env.production.template ]; then
+              cp env.production.template .env.production
+              echo "[INFO] .env.production updated successfully"
+            else
+              echo "[ERROR] env.production.template missing"; exit 1;
+            fi
+
+            echo "[INFO] Installing dependencies..."
+            npm install  || { echo "[ERROR] NPM install failed"; exit 1; }
+
+           
+            echo "[INFO] Starting/Restarting PM2 service..."
+            if pm2 describe pallet-pickup-prod > /dev/null; then
+              pm2 restart pallet-pickup-prod || { echo "[ERROR] PM2 restart failed"; exit 1; }
+            else
+              pm2 start npm --name "pallet-pickup-prod" -- run ec2 || { echo "[ERROR] PM2 start failed"; exit 1; }
+              pm2 save
+            fi
+
+            echo "=========================================="
+            echo "[DEPLOYMENT FINISHED SUCCESSFULLY] $(date)"
+            echo "=========================================="
