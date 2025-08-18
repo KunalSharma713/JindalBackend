@@ -42,12 +42,16 @@ const connectDB = () => {
             console.error('🔴 MongoDB error:', err);
         });
 
-        // Handle application termination
-        process.on('SIGINT', () => {
-            mongoose.connection.close(() => {
+        // Update process termination handler
+        process.on('SIGINT', async () => {
+            try {
+                await mongoose.connection.close();
                 console.log('MongoDB disconnected through app termination');
                 process.exit(0);
-            });
+            } catch (err) {
+                console.error('Error during MongoDB disconnection:', err);
+                process.exit(1);
+            }
         });
     });
 };
