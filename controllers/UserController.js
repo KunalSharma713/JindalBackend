@@ -45,20 +45,31 @@ const createUser = async (req, res) => {
     }
 };
  
-// Update user details (email and password not allowed)
+// Update user details
 const updateUser = async (req, res) => {
     const { id } = req.params;
-    const { first_name, last_name, mobile_no } = req.body;
- 
-    // Prevent email and password updates through this endpoint
-    if (req.body.email || req.body.password) {
-        return res.status(400).json({ message: 'Email and password cannot be updated from this endpoint.' });
-    }
+    const { first_name, last_name, mobile_no, email, password } = req.body;
+    const updateFields = { first_name, last_name, mobile_no };
  
     try {
+        // If email is being updated, check if it's already in use by another user
+        if (email) {
+            const existingUser = await User.findOne({ email, _id: { $ne: id } });
+            if (existingUser) {
+                return res.status(400).json({ message: 'Email is already in use.' });
+            }
+            updateFields.email = email;
+        }
+
+        // If password is being updated, hash the new password
+        if (password) {
+            const salt = await bcrypt.genSalt(10);
+            updateFields.password = await bcrypt.hash(password, salt);
+        }
+
         const user = await User.findByIdAndUpdate(
             id,
-            { first_name, last_name, mobile_no },
+            updateFields,
             { new: true, runValidators: true }
         ).select('-password'); // Exclude password from the result
  
