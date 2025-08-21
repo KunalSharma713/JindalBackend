@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
-
+ 
 const userSchema = new Schema({
     username: {
         type: String,
@@ -31,11 +31,6 @@ const userSchema = new Schema({
         ref: "Roles",
         required: true,
     },
-    warehouse: {
-        type: Schema.Types.ObjectId,
-        ref: "Warehouse",   // <-- Relation to Warehouse
-        required: false     // make true if every user must belong to a warehouse
-    },
     created_at: {
         type: Date,
         default: Date.now,
@@ -45,5 +40,5 @@ const userSchema = new Schema({
         default: Date.now,
     },
 });
-
+ 
 module.exports = mongoose.model("Users", userSchema);

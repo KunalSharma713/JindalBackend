@@ -38,7 +38,8 @@ app.use(
   })
 );
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
+console.log("🚀 Server running on port", PORT);
 
 // Set CORS headers for all responses
 app.use((req, res, next) => {
