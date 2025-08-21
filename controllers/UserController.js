@@ -1,27 +1,34 @@
 const User = require('../models/user');
 const Role = require('../models/role');
+const Warehouse = require('../models/warehouse');
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 
 // Create a new user (Admin action)
 const createUser = async (req, res) => {
-    const { username, email, password, first_name, last_name, mobile_no, roleid } = req.body;
+    const { username, email, password, first_name, last_name, mobile_no, roleid, warehouseId } = req.body;
 
     if (!username || !email || !password || !first_name || !roleid) {
         return res.status(400).json({ message: 'Please provide all required fields: username, email, password, first_name, roleid.' });
     }
 
     try {
-        // Check if user already exists
         const existingUser = await User.findOne({ $or: [{ email }, { username }] });
         if (existingUser) {
             return res.status(409).json({ message: 'Username or email already exists.' });
         }
 
-        // Check if role exists
         const roleExists = await Role.findById(roleid);
         if (!roleExists) {
             return res.status(404).json({ message: 'Role not found.' });
+        }
+
+        let warehouseExists = null;
+        if (warehouseId) {
+            warehouseExists = await Warehouse.findById(warehouseId);
+            if (!warehouseExists) {
+                return res.status(404).json({ message: 'Warehouse not found.' });
+            }
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -33,10 +40,10 @@ const createUser = async (req, res) => {
             first_name,
             last_name,
             mobile_no,
-            roleid
+            roleid,
+            warehouseId
         });
 
-        // Avoid sending password back in the response
         newUser.password = undefined;
 
         res.status(201).json({ message: 'User created successfully.', user: newUser });
@@ -45,22 +52,28 @@ const createUser = async (req, res) => {
     }
 };
 
-// Update user details (email and password not allowed)
+// Update user details
 const updateUser = async (req, res) => {
     const { id } = req.params;
-    const { first_name, last_name, mobile_no } = req.body;
+    const { first_name, last_name, mobile_no, warehouseId } = req.body;
 
-    // Prevent email and password updates through this endpoint
     if (req.body.email || req.body.password) {
         return res.status(400).json({ message: 'Email and password cannot be updated from this endpoint.' });
     }
 
     try {
+        if (warehouseId) {
+            const warehouseExists = await Warehouse.findById(warehouseId);
+            if (!warehouseExists) {
+                return res.status(404).json({ message: 'Warehouse not found.' });
+            }
+        }
+
         const user = await User.findByIdAndUpdate(
             id,
-            { first_name, last_name, mobile_no },
+            { first_name, last_name, mobile_no, warehouseId },
             { new: true, runValidators: true }
-        ).select('-password'); // Exclude password from the result
+        ).select('-password');
 
         if (!user) {
             return res.status(404).json({ message: 'User not found.' });
@@ -82,7 +95,6 @@ const updateUserRole = async (req, res) => {
     }
 
     try {
-        // Check if the role exists
         const roleExists = await Role.findById(roleid);
         if (!roleExists) {
             return res.status(404).json({ message: 'Role not found.' });
@@ -107,33 +119,26 @@ const updateUserRole = async (req, res) => {
 // List users with filtering, pagination, and sorting
 const getAllUsers = async (req, res) => {
     try {
-        // Pagination
         const page = parseInt(req.query.page, 10) || 1;
         const limit = parseInt(req.query.limit, 10) || 10;
         const skip = (page - 1) * limit;
 
-        // Filtering
         const filter = {};
-        if (req.query.roleid) {
-            filter.roleid = req.query.roleid;
-        }
-        if (req.query.username) {
-            filter.username = { $regex: req.query.username, $options: 'i' };
-        }
-         if (req.query.email) {
-            filter.email = { $regex: req.query.email, $options: 'i' };
-        }
+        if (req.query.roleid) filter.roleid = req.query.roleid;
+        if (req.query.username) filter.username = { $regex: req.query.username, $options: 'i' };
+        if (req.query.email) filter.email = { $regex: req.query.email, $options: 'i' };
+        if (req.query.warehouseId) filter.warehouseId = req.query.warehouseId;
 
-        // Sorting
         const sort = {};
         if (req.query.sortBy) {
             sort[req.query.sortBy] = req.query.sortOrder === 'desc' ? -1 : 1;
         } else {
-            sort.created_at = -1; // Default sort
+            sort.created_at = -1;
         }
 
         const users = await User.find(filter)
-            .populate('roleid', 'name slug') // Populate role details
+            .populate('roleid', 'name slug')
+            .populate('warehouseId', 'name location')
             .select('-password')
             .sort(sort)
             .skip(skip)
@@ -159,7 +164,7 @@ const getAllUsers = async (req, res) => {
 // Get a single user by ID, username, or email
 const getUser = async (req, res) => {
     const { identifier } = req.params;
-    
+
     try {
         let query;
         if (mongoose.Types.ObjectId.isValid(identifier)) {
@@ -170,6 +175,7 @@ const getUser = async (req, res) => {
 
         const user = await User.findOne(query)
             .populate('roleid', 'name slug')
+            .populate('warehouseId', 'name location')
             .select('-password');
 
         if (!user) {
@@ -182,7 +188,7 @@ const getUser = async (req, res) => {
     }
 };
 
-// Delete a user by ID
+// Delete a user
 const deleteUser = async (req, res) => {
     const { id } = req.params;
 

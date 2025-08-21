@@ -31,6 +31,11 @@ const userSchema = new Schema({
         ref: "Roles",
         required: true,
     },
+    warehouse: {
+        type: Schema.Types.ObjectId,
+        ref: "Warehouse",   // <-- Relation to Warehouse
+        required: false     // make true if every user must belong to a warehouse
+    },
     created_at: {
         type: Date,
         default: Date.now,

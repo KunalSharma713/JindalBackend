@@ -47,9 +47,8 @@ const registerUser = async (req, res) => {
 };
 
 const loginUser = async (req, res) => {
-    const { email, password, deviceInfo } = req.body;
-
-    if (!email || !password || !deviceInfo) {
+    const { email, password } = req.body;
+    if (!email || !password) {
         return res.status(400).json({ message: 'Email, password, and deviceInfo are required.' });
     }
 
@@ -69,8 +68,7 @@ const loginUser = async (req, res) => {
 
         await new Session({
             userId: foundUser._id,
-            refreshToken,
-            deviceInfo
+            refreshToken
         }).save();
 
         res.json({
@@ -143,7 +141,7 @@ const logoutUser = async (req, res) => {
 const updatePassword = async (req, res) => {
     const { oldPassword, newPassword } = req.body;
     const userId = req.user?.id;
-    
+
     if (!userId) {
         return res.status(401).json({ message: 'Unauthorized: Not logged in.' });
     }
