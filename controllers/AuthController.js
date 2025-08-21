@@ -2,7 +2,7 @@ const User = require('../models/user');
 const Session = require('../models/session');
 const bcrypt = require('bcryptjs');
 
-const { generateJWT, verifyJWT } = require('../utils/generateJWT');
+const { generateJWT } = require('../utils/generateJWT');
 const { generateRefreshToken } = require('../utils/generateRefreshToken');
 const { verifyRefreshToken } = require('../utils/verifyRefreshToken');
 
@@ -171,44 +171,10 @@ const updatePassword = async (req, res) => {
     }
 };
 
-const verifyToken = async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ message: 'No token provided' });
-    }
-
-    const token = authHeader.split(' ')[1];
-
-    try {
-        const decoded = verifyJWT(token);
-        const user = await User.findById(decoded.UserInfo.id).select('-password');
-        
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        // Return user data without sensitive information
-        const userData = {
-            id: user._id,
-            username: user.username,
-            email: user.email,
-            roleid: user.roleid,
-            first_name: user.first_name,
-            last_name: user.last_name
-        };
-
-        res.json({ user: userData });
-    } catch (error) {
-        console.error('Token verification error:', error);
-        res.status(401).json({ message: 'Invalid or expired token' });
-    }
-};
-
 module.exports = {
     registerUser,
     loginUser,
     refreshAccessToken,
     logoutUser,
-    updatePassword,
-    verifyToken
+    updatePassword
 };

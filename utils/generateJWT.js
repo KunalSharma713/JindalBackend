@@ -8,7 +8,7 @@ const generateJWT = (user) => {
 
   // Check if the secret is available
   if (!secretKey) {
-    throw new Error('JWT_SECRET is not set in environment variables');
+    throw new Error('ACCESS_TOKEN_SECRET is not set in environment variables');
   }
 
   const payload = {
@@ -25,19 +25,4 @@ const generateJWT = (user) => {
   });
 };
 
-// Function to verify JWT token
-const verifyJWT = (token) => {
-  const secretKey = process.env.JWT_SECRET;
-  
-  if (!secretKey) {
-    throw new Error('JWT_SECRET is not set in environment variables');
-  }
-
-  try {
-    return jwt.verify(token, secretKey);
-  } catch (error) {
-    throw new Error('Invalid or expired token');
-  }
-};
-
-module.exports = { generateJWT, verifyJWT };
+module.exports = { generateJWT };

@@ -5,19 +5,17 @@ const {
     loginUser,
     refreshAccessToken,
     logoutUser,
-    updatePassword,
-    verifyToken
+    updatePassword
 } = require('../controllers/AuthController');
-const verifyTokenMiddleware = require('../utils/VerifyToken');
+const verifyToken = require('../utils/VerifyToken');
 
 // Public routes
 router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.post('/refresh', refreshAccessToken);
 router.post('/logout', logoutUser);
-router.get('/verify-token', verifyToken);
 
 // Protected route
-router.put('/update-password', verifyTokenMiddleware, updatePassword);
+router.put('/update-password', verifyToken, updatePassword);
 
 module.exports = router;
