@@ -2,10 +2,15 @@ const Warehouse = require("../models/warehouse");
 const Location = require("../models/location");
 // Create a new warehouse
 const createWarehouse = async (req, res) => {
-  const { warehouse_name, lat, long } = req.body;
+  const { warehouse_name, code, lat, long } = req.body;
 
   try {
-    const newWarehouse = await Warehouse.create({ warehouse_name, lat, long });
+    const newWarehouse = await Warehouse.create({
+      warehouse_name,
+      code,
+      lat,
+      long,
+    });
     res.status(201).json({
       message: "Warehouse created successfully.",
       warehouse: newWarehouse,
@@ -81,11 +86,11 @@ const getWarehouseById = async (req, res) => {
 
 // Update a warehouse
 const updateWarehouse = async (req, res) => {
-  const { warehouse_name, lat, long } = req.body;
+  const { warehouse_name, code, lat, long } = req.body;
   try {
     const warehouse = await Warehouse.findByIdAndUpdate(
       req.params.id,
-      { warehouse_name, lat, long },
+      { warehouse_name, code, lat, long },
       { new: true, runValidators: true }
     );
     if (!warehouse) {
