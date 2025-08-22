@@ -6,10 +6,10 @@ const mongoose = require('mongoose');
 
 // Create a new user (Admin action)
 const createUser = async (req, res) => {
-    const { username, email, password, first_name, last_name, mobile_no, roleid, warehouse } = req.body;
+    const { username, email, password, first_name, last_name, mobile_no, roleid } = req.body;
 
-    if (!username || !email || !password || !first_name || !roleid || !warehouse) {
-        return res.status(400).json({ message: 'Please provide all required fields: username, email, password, first_name, roleid, warehouse.' });
+    if (!username || !email || !password || !first_name || !roleid) {
+        return res.status(400).json({ message: 'Please provide all required fields: username, email, password, first_name, roleid.' });
     }
 
     try {
@@ -25,11 +25,12 @@ const createUser = async (req, res) => {
             return res.status(404).json({ message: 'Role not found.' });
         }
 
-        // Check if warehouse exists
-        const warehouseExists = await Warehouse.findById(warehouse);
-        if (!warehouseExists) {
-            return res.status(404).json({ message: 'Warehouse not found.' });
+        // Get the most recent warehouse
+        const latestWarehouse = await Warehouse.findOne().sort({ createdAt: -1 });
+        if (!latestWarehouse) {
+            return res.status(404).json({ message: 'No warehouse found. Please create a warehouse first.' });
         }
+        const warehouse = latestWarehouse._id;
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
