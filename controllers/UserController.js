@@ -14,12 +14,27 @@ const createUser = async (req, res) => {
     last_name,
     mobile_no,
     roleid,
+    warehouse,
   } = req.body;
 
-  if (!username || !email || !password || !first_name || !roleid) {
+  if (
+    !username ||
+    !email ||
+    !password ||
+    !first_name ||
+    !roleid ||
+    !warehouse
+  ) {
     return res.status(400).json({
       message:
-        "Please provide all required fields: username, email, password, first_name, roleid.",
+        "Please provide all required fields: username, email, password, first_name, roleid, warehouse.",
+    });
+  }
+
+  // Validate warehouse ID format
+  if (!mongoose.Types.ObjectId.isValid(warehouse)) {
+    return res.status(400).json({
+      message: "Invalid warehouse ID format",
     });
   }
 
@@ -38,14 +53,11 @@ const createUser = async (req, res) => {
       return res.status(404).json({ message: "Role not found." });
     }
 
-    // Get the most recent warehouse
-    const latestWarehouse = await Warehouse.findOne().sort({ createdAt: -1 });
-    if (!latestWarehouse) {
-      return res.status(404).json({
-        message: "No warehouse found. Please create a warehouse first.",
-      });
+    // Check if warehouse exists
+    const warehouseExists = await Warehouse.findById(warehouse);
+    if (!warehouseExists) {
+      return res.status(404).json({ message: "Warehouse not found." });
     }
-    const warehouse = latestWarehouse._id;
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -63,41 +75,16 @@ const createUser = async (req, res) => {
     // Avoid sending password back in the response
     newUser.password = undefined;
 
-    res
-      .status(201)
-      .json({ message: "User created successfully.", user: newUser });
+    res.status(201).json({
+      message: "User created successfully.",
+      user: newUser,
+    });
   } catch (error) {
     res.status(500).json({
       message: "Server error while creating user.",
       error: error.message,
     });
   }
-
-  // Check if warehouse exists
-  const warehouseExists = await Warehouse.findById(warehouse);
-  if (!warehouseExists) {
-    return res.status(404).json({ message: "Warehouse not found." });
-  }
-
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  const newUser = await User.create({
-    username,
-    email,
-    password: hashedPassword,
-    first_name,
-    last_name,
-    mobile_no,
-    roleid,
-    warehouse,
-  });
-
-  // Avoid sending password back in the response
-  newUser.password = undefined;
-
-  res
-    .status(201)
-    .json({ message: "User created successfully.", user: newUser });
 };
 
 // Update user details (including email and password)
@@ -265,8 +252,20 @@ const getAllUsers = async (req, res) => {
     const limit = parseInt(req.query.limit, 10) || 10;
     const skip = (page - 1) * limit;
 
-    // Filtering
+    // Filtering - always filter by warehouse
     const filter = {};
+
+    // Require warehouse filter for all requests
+    if (!req.query.warehouse) {
+      return res.status(400).json({
+        message: "Warehouse ID is required for user listing.",
+      });
+    }
+
+    // Always apply warehouse filter
+    filter.warehouse = req.query.warehouse;
+
+    // Additional filters
     if (req.query.roleid) {
       filter.roleid = req.query.roleid;
     }
