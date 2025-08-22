@@ -6,6 +6,7 @@ const {
     getUser,
     updateUser,
     updateUserRole,
+    updateUserWarehouse,
     deleteUser
 } = require('../controllers/UserController');
 const verifyToken = require('../utils/VerifyToken');
@@ -27,6 +28,9 @@ router.put('/:id', updateUser);
 
 // PATCH /api/users/:id/role - Update a user's role
 router.patch('/:id/role', updateUserRole);
+
+// PATCH /api/users/:id/warehouse - Update a user's warehouse assignment
+router.patch('/:id/warehouse', updateUserWarehouse);
 
 // DELETE /api/users/:id - Delete a user
 router.delete('/:id', deleteUser);

@@ -28,7 +28,11 @@ const userSchema = new Schema({
     },
     roleid: {
         type: Schema.Types.ObjectId,
-        ref: "Roles",
+        ref: "Roles"
+    },
+    warehouse: {
+        type: Schema.Types.ObjectId,
+        ref: "Warehouse",
         required: true,
     },
     created_at: {
