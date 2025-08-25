@@ -127,7 +127,6 @@ const putaway = async (req, res) => {
   }
 };
 
-
 const movePallets = async (req, res) => {
   console.log(
     "🚚 Move Pallets API called with body:",
@@ -241,7 +240,6 @@ const movePallets = async (req, res) => {
   }
 };
 
-
 const getAllPallets = async (req, res) => {
   console.log("📋 Get All Pallets API called with query:", req.query);
 
@@ -315,6 +313,149 @@ const getAllPallets = async (req, res) => {
     console.error("❌ Get all pallets error:", error);
     res.status(500).json({
       message: "Server error while fetching pallets.",
+      error: error.message,
+    });
+  }
+};
+
+const getAllPalletsBarcode = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+    const barcodeStatus = req.query.status || "all";
+    const filter = {};
+
+    // Handle barcode status filter
+    if (barcodeStatus && barcodeStatus.toLowerCase() !== "all") {
+      if (barcodeStatus.toLowerCase() === "assigned") {
+        filter["pallet"] = { $exists: true, $ne: null };
+      } else if (barcodeStatus.toLowerCase() === "unassigned") {
+        filter["pallet"] = null;
+      }
+    }
+
+    // Handle barcode search
+    if (req.query.barcode) {
+      filter.barcode_key = {
+        $regex: req.query.barcode.toUpperCase(),
+        $options: "i",
+      };
+    }
+
+    // Set up sorting
+    const sort = { createdAt: -1 };
+    if (req.query.sortBy) {
+      sort[req.query.sortBy] = req.query.sortOrder === "desc" ? -1 : 1;
+    }
+
+    // Get all pallet barcodes with left-joined pallet data
+    const [barcodes, total] = await Promise.all([
+      PalletBarcode.aggregate([
+        // Match stage for filtering
+        { $match: filter },
+
+        // Left join with pallets
+        {
+          $lookup: {
+            from: "pallets",
+            localField: "_id",
+            foreignField: "pallet_barcode",
+            as: "pallet",
+          },
+        },
+
+        // Unwind the pallet array
+        { $unwind: { path: "$pallet", preserveNullAndEmptyArrays: true } },
+
+        // Left join pallet's location
+        {
+          $lookup: {
+            from: "locations",
+            localField: "pallet.location",
+            foreignField: "_id",
+            as: "pallet.location",
+          },
+        },
+
+        // Unwind the location array
+        {
+          $unwind: {
+            path: "$pallet.location",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+
+        // Sort and paginate
+        { $sort: sort },
+        { $skip: skip },
+        { $limit: limit },
+
+        // Project the final result
+        {
+          $project: {
+            // Barcode fields
+            _id: 1,
+            barcode_key: 1,
+            status: 1,
+            createdAt: 1,
+            updatedAt: 1,
+
+            // Pallet fields (if exists)
+            pallet: {
+              $cond: {
+                if: { $eq: [{ $type: "$pallet._id" }, "missing"] },
+                then: null,
+                else: {
+                  // All fields from pallet schema
+                  _id: "$pallet._id",
+                  sequenceNumber: "$pallet.sequenceNumber",
+                  sequence: "$pallet.sequence",
+                  size: "$pallet.size",
+                  last_moved_date: "$pallet.last_moved_date",
+                  quantity: "$pallet.quantity",
+                  pallet_barcode: "$pallet.pallet_barcode",
+                  createdAt: "$pallet.createdAt",
+                  updatedAt: "$pallet.updatedAt",
+
+                  // Nested location
+                  location: {
+                    $cond: {
+                      if: {
+                        $eq: [{ $type: "$pallet.location._id" }, "missing"],
+                      },
+                      then: null,
+                      else: {
+                        _id: "$pallet.location._id",
+                        location_name: "$pallet.location.location_name",
+                        barcode_key: "$pallet.location.barcode_key",
+                        // Add other location fields as needed
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      ]),
+      PalletBarcode.countDocuments(filter),
+    ]);
+
+    res.json({
+      message: "Barcodes retrieved successfully.",
+      data: barcodes,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error("Get all pallet barcodes error:", error);
+    res.status(500).json({
+      message: "Server error while fetching pallet barcodes.",
       error: error.message,
     });
   }
@@ -509,7 +650,144 @@ const pickupPallets = async (req, res) => {
   }
 };
 
+// Assign a pallet to a location
+const assignPallet = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
+  try {
+    const { location, size, quantity, barcode_key, barcodeId } = req.body;
+
+    // Validate required fields
+    if (!location || !size || !quantity || !barcode_key) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({
+        success: false,
+        message:
+          "Missing required fields: location, size, quantity, and barcode_key are required",
+      });
+    }
+
+    // Check if location exists
+    const locationExists = await Location.findById(location).session(session);
+    if (!locationExists) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({
+        success: false,
+        message: "Location not found",
+      });
+    }
+
+    // Check if barcode exists and is available
+    const barcode = await PalletBarcode.findById(barcodeId).session(session);
+    if (!barcode) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({
+        success: false,
+        message: "Barcode not found",
+      });
+    }
+
+    // Create new pallet
+    const newPallet = new Pallet({
+      location,
+      size,
+      quantity,
+      barcode_key,
+      pallet_barcode: barcodeId,
+      last_moved_date: new Date(),
+    });
+
+    // Save pallet and update barcode status in a transaction
+    await newPallet.save({ session });
+    barcode.status = "assigned";
+    await barcode.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(201).json({
+      success: true,
+      message: "Pallet assigned successfully",
+      data: newPallet,
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Error assigning pallet:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while assigning pallet",
+      error: error.message,
+    });
+  }
+};
+
+// Update an existing pallet
+const updatePallet = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { id } = req.params;
+    const { location, size, quantity } = req.body;
+
+    // Find and update pallet
+    const pallet = await Pallet.findById(id).session(session);
+    if (!pallet) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({
+        success: false,
+        message: "Pallet not found",
+      });
+    }
+
+    // Update fields if provided
+    if (location) {
+      // Verify new location exists
+      const locationExists = await Location.findById(location).session(session);
+      if (!locationExists) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(404).json({
+          success: false,
+          message: "New location not found",
+        });
+      }
+      pallet.location = location;
+    }
+
+    if (size) pallet.size = size;
+    if (quantity) pallet.quantity = quantity;
+
+    pallet.last_moved_date = new Date();
+
+    await pallet.save({ session });
+    await session.commitTransaction();
+    session.endSession();
+
+    res.json({
+      success: true,
+      message: "Pallet updated successfully",
+      data: pallet,
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Error updating pallet:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while updating pallet",
+      error: error.message,
+    });
+  }
+};
+
+// Find a pallet by barcode
 const findPallet = async (req, res) => {
   console.log("🔍 Find Pallet API called with query:", req.query);
 
@@ -566,7 +844,10 @@ module.exports = {
   putaway,
   getAllPallets,
   movePallets,
+  getAllPalletsBarcode,
   getPickUpPallets,
-  findPallet,
   pickupPallets,
+  findPallet,
+  assignPallet,
+  updatePallet,
 };
