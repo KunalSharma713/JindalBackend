@@ -4,7 +4,6 @@ const Schema = mongoose.Schema;
 const palletBarcodeSchema = new Schema({
     barcode_key: {
         type: String,
-        // required: true,
         unique: true,
         uppercase: true
     },
@@ -12,6 +11,16 @@ const palletBarcodeSchema = new Schema({
         type: String,
         enum: ['new', 'assigned', 'used'],
         default: 'new'
+    },
+    warehouse: {
+        type: Schema.Types.ObjectId,
+        ref: 'Warehouse',
+        required: [true, 'Warehouse is required.'],
+    },
+    location: {
+        type: Schema.Types.ObjectId,
+        ref: 'Location',
+        default: null
     }
 }, { timestamps: true });
 

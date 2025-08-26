@@ -325,7 +325,20 @@ const getAllPalletsBarcode = async (req, res) => {
     const skip = (page - 1) * limit;
     const barcodeStatus = req.query.status || "all";
     const filter = {};
+    // Require warehouse filter for all requests
+    if (!req.query.warehouse) {
+      return res.status(400).json({
+        message: "Warehouse ID is required for pallet listing.",
+      });
+    }
 
+    if (!mongoose.Types.ObjectId.isValid(req.query.warehouse)) {
+      return res.status(400).json({
+        message: "Invalid warehouse ID.",
+      });
+    }
+
+    filter.warehouse = new mongoose.Types.ObjectId(req.query.warehouse);
     // Handle barcode status filter
     if (barcodeStatus && barcodeStatus.toLowerCase() !== "all") {
       if (barcodeStatus.toLowerCase() === "assigned") {
@@ -701,9 +714,10 @@ const assignPallet = async (req, res) => {
       last_moved_date: new Date(),
     });
 
-    // Save pallet and update barcode status in a transaction
+    // Save pallet and update barcode status and location in a transaction
     await newPallet.save({ session });
     barcode.status = "assigned";
+    barcode.location = location; // Update the location in palletBarcode
     await barcode.save({ session });
 
     await session.commitTransaction();
@@ -758,7 +772,17 @@ const updatePallet = async (req, res) => {
           message: "New location not found",
         });
       }
+      // Update pallet location
       pallet.location = location;
+
+      // Also update the location in the associated palletBarcode
+      const barcode = await PalletBarcode.findById(
+        pallet.pallet_barcode
+      ).session(session);
+      if (barcode) {
+        barcode.location = location;
+        await barcode.save({ session });
+      }
     }
 
     if (size) pallet.size = size;
