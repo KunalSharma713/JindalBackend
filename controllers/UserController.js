@@ -131,11 +131,13 @@ const updateUser = async (req, res) => {
 
     updateFields.updated_at = new Date();
 
-    console.log(updateFields);
-    const user = await User.findByIdAndUpdate(id, updateFields, {
-      new: true,
-      runValidators: true,
-    })
+    const user = await User.findByIdAndUpdate(
+      id,
+      updateFields,
+      {
+        new: true,
+        runValidators: true,
+      })
       .populate("roleid", "name slug")
       .populate("warehouse", "name location")
       .select("-password");
@@ -151,22 +153,6 @@ const updateUser = async (req, res) => {
       error: error.message,
     });
   }
-
-  updateFields.updated_at = new Date();
-
-  const user = await User.findByIdAndUpdate(id, updateFields, {
-    new: true,
-    runValidators: true,
-  })
-    .populate("roleid", "name slug")
-    .populate("warehouse", "name location")
-    .select("-password");
-
-  if (!user) {
-    return res.status(404).json({ message: "User not found." });
-  }
-
-  res.json({ message: "User updated successfully.", user });
 };
 
 // Update a user's role
