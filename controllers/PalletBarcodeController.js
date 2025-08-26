@@ -4,9 +4,15 @@ const PalletBarcode = require("../models/palletBarcode");
 // Get all barcodes with filtering, searching, sorting, and pagination
 const getAllBarcodes = async (req, res) => {
   try {
+    // Parse and validate pagination parameters
+    let page = parseInt(req.query.page, 10) || 1;
+    let limit = parseInt(req.query.limit, 10) || 10;
+    
+    // Ensure page is at least 1 and limit is reasonable
+    page = Math.max(1, page);
+    limit = Math.min(Math.max(1, limit), 100); // Max 100 items per page
+    
     const {
-      page = 1,
-      limit = 10,
       search,
       status,
       sortBy = "createdAt",

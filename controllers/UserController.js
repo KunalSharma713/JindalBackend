@@ -376,8 +376,6 @@ const deleteUser = async (req, res) => {
       error: error.message,
     });
   }
-
-  res.json({ message: "User deleted successfully." });
 };
 
 module.exports = {
