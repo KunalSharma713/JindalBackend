@@ -33,8 +33,32 @@ const getAllWarehouses = async (req, res) => {
 
     // Filtering
     const filter = {};
-    if (req.query.name) {
-      filter.warehouse_name = { $regex: req.query.name, $options: "i" };
+    if (req.query.warehouse_name) {
+      filter.warehouse_name = {
+        $regex: req.query.warehouse_name,
+        $options: "i",
+      };
+    }
+
+    if (req.query.code) {
+      filter.code = {
+        $regex: req.query.code,
+        $options: "i",
+      };
+    }
+
+    if (req.query.lat) {
+      const lat = parseFloat(req.query.lat);
+      if (!isNaN(lat)) {
+        filter.lat = lat;
+      }
+    }
+
+    if (req.query.long) {
+      const long = parseFloat(req.query.long);
+      if (!isNaN(long)) {
+        filter.long = long;
+      }
     }
 
     // Query data

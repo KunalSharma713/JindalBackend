@@ -266,16 +266,15 @@ const getAllUsers = async (req, res) => {
     filter.warehouse = req.query.warehouse;
 
     // Additional filters
-    if (req.query.roleid) {
-      filter.roleid = req.query.roleid;
-    }
     if (req.query.username) {
       filter.username = { $regex: req.query.username, $options: "i" };
     }
     if (req.query.email) {
       filter.email = { $regex: req.query.email, $options: "i" };
     }
-
+    if (req.query.mobile_no) {
+      filter.mobile_no = { $regex: req.query.mobile_no, $options: "i" };
+    }
     // Sorting
     const sort = {};
     if (req.query.sortBy) {

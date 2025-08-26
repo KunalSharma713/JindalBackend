@@ -46,10 +46,27 @@ const getAllLocations = async (req, res) => {
     }
     filter.warehouse = req.query.warehouse;
 
-    if (req.query.name) {
-      filter.location_name = { $regex: req.query.name, $options: "i" };
+    if (req.query.location_name) {
+      filter.location_name = { $regex: req.query.location_name, $options: "i" };
     }
 
+    if (req.query.barcode_key) {
+      filter.barcode_key = { $regex: req.query.barcode_key, $options: "i" };
+    }
+
+    if (req.query.lat) {
+      const lat = parseFloat(req.query.lat);
+      if (!isNaN(lat)) {
+        filter.lat = lat;
+      }
+    }
+
+    if (req.query.long) {
+      const long = parseFloat(req.query.long);
+      if (!isNaN(long)) {
+        filter.long = long;
+      }
+    }
     const locations = await Location.find(filter)
       .populate("warehouse", "warehouse_name code") // Populate warehouse details
       .sort({ createdAt: -1 })

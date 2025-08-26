@@ -7,10 +7,10 @@ const fs = require("fs");
 
 if (process.env.NODE_ENV === "production" && fs.existsSync(".env.production")) {
   require("dotenv").config({ path: ".env.production" });
-  console.log("✅ Loaded .env.production");
+  console.log("Loaded .env.production");
 } else {
   require("dotenv").config(); // fallback to default .env
-  console.log("✅ Loaded .env");
+  console.log("Loaded .env");
 }
 require("dotenv").config();
 
@@ -23,7 +23,7 @@ const locationRoutes = require("../routes/Location");
 const palletBarcodeRoutes = require("../routes/PalletBarcode");
 const palletRoutes = require("../routes/Pallet");
 const barcodePrintRoutes = require("../routes/BarcodePrint");
-
+const BulkUploadRoutes = require("../routes/BulkUploadRoutes");
 // Initialize the Express app
 const app = express();
 
@@ -61,6 +61,7 @@ app.use("/api/location", locationRoutes);
 app.use("/api/pallet-barcode", palletBarcodeRoutes);
 app.use("/api/pallet", palletRoutes);
 app.use("/api/barcode-print", barcodePrintRoutes);
+app.use("/api/bulkupload", BulkUploadRoutes);
 app.get("/", (req, res) => {
   res.send("Hello, This is main branch");
 });

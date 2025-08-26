@@ -323,8 +323,8 @@ const getAllPalletsBarcode = async (req, res) => {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
     const skip = (page - 1) * limit;
-    const barcodeStatus = req.query.status || "all";
     const filter = {};
+    const palletFilter = {};
     // Require warehouse filter for all requests
     if (!req.query.warehouse) {
       return res.status(400).json({
@@ -339,23 +339,37 @@ const getAllPalletsBarcode = async (req, res) => {
     }
 
     filter.warehouse = new mongoose.Types.ObjectId(req.query.warehouse);
-    // Handle barcode status filter
-    if (barcodeStatus && barcodeStatus.toLowerCase() !== "all") {
-      if (barcodeStatus.toLowerCase() === "assigned") {
-        filter["pallet"] = { $exists: true, $ne: null };
-      } else if (barcodeStatus.toLowerCase() === "unassigned") {
-        filter["pallet"] = null;
-      }
-    }
 
-    // Handle barcode search
-    if (req.query.barcode) {
+    if (req.query.barcode_key) {
       filter.barcode_key = {
-        $regex: req.query.barcode.toUpperCase(),
+        $regex: req.query.barcode_key,
         $options: "i",
       };
     }
+    if (req.query.status) {
+      filter.status = {
+        $regex: req.query.status,
+        $options: "i",
+      };
+    }
+    // Pallet field filters
+    if (req.query.sequenceNumber) {
+      const seqNum = parseInt(req.query.sequenceNumber, 10);
+      if (!isNaN(seqNum)) {
+        palletFilter["pallet.sequenceNumber"] = seqNum;
+      }
+    }
 
+    if (req.query.sequence) {
+      palletFilter["pallet.sequence"] = {
+        $regex: req.query.sequence,
+        $options: "i",
+      };
+    }
+    if (req.query.quantity) {
+      // Convert to number if exact match expected
+      palletFilter["pallet.quantity"] = parseInt(req.query.quantity, 10);
+    }
     // Set up sorting
     const sort = { createdAt: -1 };
     if (req.query.sortBy) {
@@ -398,7 +412,7 @@ const getAllPalletsBarcode = async (req, res) => {
             preserveNullAndEmptyArrays: true,
           },
         },
-
+        { $match: palletFilter },
         // Sort and paginate
         { $sort: sort },
         { $skip: skip },
