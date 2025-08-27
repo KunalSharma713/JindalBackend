@@ -9,7 +9,7 @@ const router = express.Router();
 
 router.post("/location", BulkUploadLocation);
 router.post("/location/upload", getLocationBulkuploads);
-router.post("/location/succes", getSuccessLocationRecordsByBulkId);
+router.post("/location/success", getSuccessLocationRecordsByBulkId);
 router.post("/location/error", getErrorLocationRecordsByBulkId);
 
 module.exports = router;

@@ -32,23 +32,16 @@ const BulkUploadLocation = async (req, res) => {
         .status(404)
         .json({ message: "Plant not found during bulk upload." });
     }
-    const users = await Users?.find({ warehouse: warehouseId }).populate({
-      path: "roleid",
-    });
-    if (!users) {
-      return res
-        .status(404)
-        .json({ message: "User not found during bulk upload." });
-    }
 
     for (const entry of records) {
       try {
         const { location_name, lat, long } = entry;
         const newLocation = await Location.create({
           location_name,
-          warehouseId,
+          warehouse: warehouseId,
           lat,
           long,
+          bulkuploadid: bulkEntry._id,
         });
         if (newLocation) successCount++;
       } catch (err) {
