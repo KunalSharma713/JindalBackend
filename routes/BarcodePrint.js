@@ -12,7 +12,7 @@ const {
 
 const verifyToken = require("../utils/VerifyToken");
 
-router.use(verifyToken);
+// router.use(verifyToken);
 // Mobile barcode print routes (existing)
 router.get("/locations", getLocationBarcodes);
 router.get("/pallets", getPalletBarcodes);

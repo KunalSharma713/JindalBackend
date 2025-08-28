@@ -1,4 +1,5 @@
 const User = require("../models/user");
+const Role = require("../models/role");
 const Session = require("../models/session");
 const bcrypt = require("bcryptjs");
 
@@ -203,10 +204,11 @@ const loginUser = async (req, res) => {
 
 const loginUserWeb = async (req, res) => {
   const { email, password } = req.body;
+
   if (!email || !password) {
     return res
       .status(400)
-      .json({ message: "Email, password, and deviceInfo are required." });
+      .json({ message: "Email and Password are required." });
   }
 
   try {
@@ -222,6 +224,21 @@ const loginUserWeb = async (req, res) => {
       return res
         .status(401)
         .json({ message: "Unauthorized: Invalid credentials." });
+    }
+
+    const roleId = foundUser?.roleid;
+    const roleInfo = await Role.findById(roleId);
+
+    if (!roleInfo) {
+      return res
+        .status(404)
+        .json({ message: "Unauthorized: Invalid credentials." });
+    }
+
+    if (roleInfo?.slug !== "super_admin") {
+      return res.status(401).json({
+        message: "Unauthorized: Only Super Admin can Sign in to Web.",
+      });
     }
 
     const accessToken = generateJWT(foundUser);
@@ -244,9 +261,10 @@ const loginUserWeb = async (req, res) => {
       },
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Server error during login.", error: error.message });
+    res.status(500).json({
+      message: "Server error during login.",
+      error: error.message,
+    });
   }
 };
 
