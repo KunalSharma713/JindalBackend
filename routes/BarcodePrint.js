@@ -8,6 +8,7 @@ const {
   // Web barcode print controllers
   getLocationBarcodesWeb,
   getPalletBarcodesWeb,
+  generateMultipleLocationBarcodesWeb,
 } = require("../controllers/BarcodePrintController");
 
 const verifyToken = require("../utils/VerifyToken");
@@ -20,5 +21,6 @@ router.get("/pallets", getPalletBarcodes);
 // Web barcode print routes (new)
 router.get("/web/locations", getLocationBarcodesWeb);
 router.get("/web/pallets", getPalletBarcodesWeb);
+router.post("/web/locations/multiple", generateMultipleLocationBarcodesWeb);
 
 module.exports = router;
