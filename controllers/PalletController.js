@@ -327,7 +327,7 @@ const getAllPalletsBarcode = async (req, res) => {
     const palletFilter = {};
     // Require warehouse filter for all requests
     if (!req.query.warehouse) {
-      return res.status(400).json({
+      return res.status(403).json({
         message: "Warehouse ID is required for pallet listing.",
       });
     }
@@ -878,14 +878,51 @@ const findPallet = async (req, res) => {
   }
 };
 
+// Web-specific controllers
+
+const getAllPalletsBarcodeWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await getAllPalletsBarcode(req, res);
+  } catch (error) {
+    console.error("Web get all pallets barcode error:", error);
+    return res
+      .status(500)
+      .json({ message: "Failed to fetch pallet barcodes for web" });
+  }
+};
+
+const assignPalletWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await assignPallet(req, res);
+  } catch (error) {
+    console.error("Web assign pallet error:", error);
+    return res.status(500).json({ message: "Web pallet assignment failed" });
+  }
+};
+
+const updatePalletWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await updatePallet(req, res);
+  } catch (error) {
+    console.error("Web update pallet error:", error);
+    return res.status(500).json({ message: "Web pallet update failed" });
+  }
+};
+
 module.exports = {
+  // Mobile exports
   putaway,
   getAllPallets,
   movePallets,
-  getAllPalletsBarcode,
   getPickUpPallets,
-  pickupPallets,
   findPallet,
-  assignPallet,
-  updatePallet,
+  pickupPallets,
+
+  // Web exports
+  getAllPalletsBarcodeWeb,
+  assignPalletWeb,
+  updatePalletWeb,
 };

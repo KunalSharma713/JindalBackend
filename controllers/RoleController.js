@@ -125,10 +125,69 @@ const getRoleById = async (req, res) => {
     }
 };
 
+// Web-specific controllers
+const createRoleWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await createRole(req, res);
+  } catch (error) {
+    console.error('Web create role error:', error);
+    return res.status(500).json({ message: 'Web role creation failed' });
+  }
+};
+
+const updateRoleWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await updateRole(req, res);
+  } catch (error) {
+    console.error('Web update role error:', error);
+    return res.status(500).json({ message: 'Web role update failed' });
+  }
+};
+
+const deleteRoleWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await deleteRole(req, res);
+  } catch (error) {
+    console.error('Web delete role error:', error);
+    return res.status(500).json({ message: 'Web role deletion failed' });
+  }
+};
+
+const getAllRolesWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await getAllRoles(req, res);
+  } catch (error) {
+    console.error('Web get all roles error:', error);
+    return res.status(500).json({ message: 'Failed to fetch roles for web' });
+  }
+};
+
+const getRoleByIdWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await getRoleById(req, res);
+  } catch (error) {
+    console.error('Web get role by ID error:', error);
+    return res.status(500).json({ message: 'Failed to fetch role for web' });
+  }
+};
+
 module.exports = {
-    createRole,
-    updateRole,
-    deleteRole,
-    getAllRoles,
-    getRoleById
+  // Mobile exports
+  createRole,
+  updateRole,
+  deleteRole,
+  getAllRoles,
+  getRoleById,
+  
+  // Web exports
+  createRoleWeb,
+  updateRoleWeb,
+  deleteRoleWeb,
+  getAllRolesWeb,
+  getRoleByIdWeb
 };

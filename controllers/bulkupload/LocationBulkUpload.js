@@ -1,7 +1,6 @@
 const bulkupload = require("../../models/bulkUpload");
 const bulkuploadLog = require("../../models/bulkuploadLog");
 const Warehouse = require("../../models/warehouse");
-const Users = require("../../models/user");
 const Location = require("../../models/location");
 
 const BulkUploadLocation = async (req, res) => {
@@ -183,9 +182,47 @@ const getErrorLocationRecordsByBulkId = async (req, res, next) => {
   }
 };
 
+// Web-specific controllers
+const BulkUploadLocationWeb = async (req, res) => {
+  try {
+    return await BulkUploadLocation(req, res);
+  } catch (error) {
+    console.error('Web bulk upload location error:', error);
+    return res.status(500).json({ message: 'Web bulk upload location failed' });
+  }
+};
+
+const getLocationBulkuploadsWeb = async (req, res) => {
+  try {
+    return await getLocationBulkuploads(req, res);
+  } catch (error) {
+    console.error('Web get location bulk uploads error:', error);
+    return res.status(500).json({ message: 'Failed to fetch bulk uploads for web' });
+  }
+};
+
+const getSuccessLocationRecordsByBulkIdWeb = async (req, res) => {
+  try {
+    return await getSuccessLocationRecordsByBulkId(req, res);
+  } catch (error) {
+    console.error('Web get success records error:', error);
+    return res.status(500).json({ message: 'Failed to fetch success records for web' });
+  }
+};
+
+const getErrorLocationRecordsByBulkIdWeb = async (req, res) => {
+  try {
+    return await getErrorLocationRecordsByBulkId(req, res);
+  } catch (error) {
+    console.error('Web get error records error:', error);
+    return res.status(500).json({ message: 'Failed to fetch error records for web' });
+  }
+};
+
 module.exports = {
-  BulkUploadLocation,
-  getLocationBulkuploads,
-  getSuccessLocationRecordsByBulkId,
-  getErrorLocationRecordsByBulkId,
+  // Web exports
+  BulkUploadLocationWeb,
+  getLocationBulkuploadsWeb,
+  getSuccessLocationRecordsByBulkIdWeb,
+  getErrorLocationRecordsByBulkIdWeb
 };

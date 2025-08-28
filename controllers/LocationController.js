@@ -1,6 +1,7 @@
 const Location = require("../models/location");
 const Warehouse = require("../models/warehouse");
-
+const User = require("../models/user");
+const mongoose = require("mongoose");
 // Create a new location
 const createLocation = async (req, res) => {
   const { location_name, warehouse, lat, long } = req.body;
@@ -37,14 +38,29 @@ const getAllLocations = async (req, res) => {
     const limit = parseInt(req.query.limit, 10) || 10;
     const skip = (page - 1) * limit;
 
-    const filter = {};
-    // Require warehouse filter for all requests
-    if (!req.query.warehouse) {
-      return res.status(400).json({
-        message: "Warehouse ID is required for location listing.",
+    // Get user ID from the token (it's already attached to req.user by verifyToken middleware)
+    const userId = req.user.id;
+
+    // Find the user to get their warehouse assignment
+    const user = await User.findById(userId).select("warehouse");
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found.",
       });
     }
-    filter.warehouse = req.query.warehouse;
+
+    // If user doesn't have a warehouse assigned and no warehouse is provided in query
+    if (!user.warehouse) {
+      return res.status(403).json({
+        message:
+          "User is not assigned to any warehouse or no warehouse was specified.",
+      });
+    }
+
+    const filter = {};
+
+    //Use user's assigned warehouse
+    filter.warehouse = user.warehouse;
 
     if (req.query.location_name) {
       filter.location_name = { $regex: req.query.location_name, $options: "i" };
@@ -67,8 +83,9 @@ const getAllLocations = async (req, res) => {
         filter.long = long;
       }
     }
+
     const locations = await Location.find(filter)
-      .populate("warehouse", "warehouse_name code") // Populate warehouse details
+      .populate("warehouse", "warehouse_name code")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -81,13 +98,13 @@ const getAllLocations = async (req, res) => {
       pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
     });
   } catch (error) {
+    console.error("Error in getAllLocations:", error);
     res.status(500).json({
       message: "Server error while fetching locations.",
       error: error.message,
     });
   }
 };
-
 // Get a single location by ID
 const getLocationById = async (req, res) => {
   try {
@@ -211,12 +228,150 @@ const printBarcodes = async (req, res) => {
   }
 };
 
+// Web-specific controllers
+const createLocationWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await createLocation(req, res);
+  } catch (error) {
+    console.error("Web location creation error:", error);
+    return res.status(500).json({ message: "Web location creation failed" });
+  }
+};
+
+const getAllLocationsWeb = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    const filter = {};
+    // Require warehouse filter for all requests
+    if (!req.query.warehouse) {
+      return res.status(403).json({
+        message: "Warehouse ID is required for location listing.",
+      });
+    }
+    if (!mongoose.Types.ObjectId.isValid(req.query.warehouse)) {
+      return res.status(400).json({
+        message: "Invalid warehouse ID.",
+      });
+    }
+
+    filter.warehouse = new mongoose.Types.ObjectId(req.query.warehouse);
+
+    if (req.query.location_name) {
+      filter.location_name = { $regex: req.query.location_name, $options: "i" };
+    }
+
+    if (req.query.barcode_key) {
+      filter.barcode_key = { $regex: req.query.barcode_key, $options: "i" };
+    }
+
+    if (req.query.lat) {
+      const lat = parseFloat(req.query.lat);
+      if (!isNaN(lat)) {
+        filter.lat = lat;
+      }
+    }
+
+    if (req.query.long) {
+      const long = parseFloat(req.query.long);
+      if (!isNaN(long)) {
+        filter.long = long;
+      }
+    }
+    const locations = await Location.find(filter)
+      .populate("warehouse", "warehouse_name code") // Populate warehouse details
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Location.countDocuments(filter);
+
+    res.json({
+      message: "Locations retrieved successfully.",
+      data: locations,
+      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Server error while fetching locations.",
+      error: error.message,
+    });
+  }
+};
+
+const getLocationByIdWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await getLocationById(req, res);
+  } catch (error) {
+    console.error("Web get location by ID error:", error);
+    return res
+      .status(500)
+      .json({ message: "Failed to fetch location for web" });
+  }
+};
+
+const findLocationWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await findLocation(req, res);
+  } catch (error) {
+    console.error("Web find location error:", error);
+    return res.status(500).json({ message: "Failed to find location for web" });
+  }
+};
+
+const printBarcodesWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await printBarcodes(req, res);
+  } catch (error) {
+    console.error("Web print barcodes error:", error);
+    return res
+      .status(500)
+      .json({ message: "Failed to print barcodes for web" });
+  }
+};
+
+const updateLocationWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await updateLocation(req, res);
+  } catch (error) {
+    console.error("Web update location error:", error);
+    return res.status(500).json({ message: "Web location update failed" });
+  }
+};
+
+const deleteLocationWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await deleteLocation(req, res);
+  } catch (error) {
+    console.error("Web delete location error:", error);
+    return res.status(500).json({ message: "Web location deletion failed" });
+  }
+};
+
 module.exports = {
+  // Mobile exports
   createLocation,
   getAllLocations,
   getLocationById,
   findLocation,
-  printBarcodes, // Export the new function
+  printBarcodes,
   updateLocation,
   deleteLocation,
+
+  // Web exports
+  createLocationWeb,
+  getAllLocationsWeb,
+  getLocationByIdWeb,
+  findLocationWeb,
+  printBarcodesWeb,
+  updateLocationWeb,
+  deleteLocationWeb,
 };

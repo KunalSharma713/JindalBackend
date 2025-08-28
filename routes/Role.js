@@ -1,30 +1,37 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 const {
-    createRole,
-    getAllRoles,
-    getRoleById,
-    updateRole,
-    deleteRole
-} = require('../controllers/RoleController');
-const verifyToken = require('../utils/VerifyToken');
+  // Mobile role controllers
+  createRole,
+  getAllRoles,
+  getRoleById,
+  updateRole,
+  deleteRole,
 
-// Protect all role routes
+  // Web role controllers
+  createRoleWeb,
+  getAllRolesWeb,
+  getRoleByIdWeb,
+  updateRoleWeb,
+  deleteRoleWeb,
+} = require("../controllers/RoleController");
+
+const verifyToken = require("../utils/VerifyToken");
+
 router.use(verifyToken);
 
-// POST /api/role - Create a new role
-router.post('/', createRole);
+// Web role routes (new)
+router.post("/web", createRoleWeb);
+router.get("/web", getAllRolesWeb);
+router.get("/web/:id", getRoleByIdWeb);
+router.put("/web/:id", updateRoleWeb);
+router.delete("/web/:id", deleteRoleWeb);
 
-// GET /api/role - Get all roles with optional filtering
-router.get('/', getAllRoles);
-
-// GET /api/role/:id - Get a single role by ID or slug
-router.get('/:id', getRoleById);
-
-// PUT /api/role/:id - Update a role
-router.put('/:id', updateRole);
-
-// DELETE /api/role/:id - Delete a role
-router.delete('/:id', deleteRole);
+// Mobile role routes (existing)
+router.post("/", createRole);
+router.get("/", getAllRoles);
+router.get("/:id", getRoleById);
+router.put("/:id", updateRole);
+router.delete("/:id", deleteRole);
 
 module.exports = router;

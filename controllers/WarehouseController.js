@@ -157,10 +157,81 @@ const deleteWarehouse = async (req, res) => {
   }
 };
 
+// Web-specific controllers
+const createWarehouseWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await createWarehouse(req, res);
+  } catch (error) {
+    console.error('Web warehouse creation error:', error);
+    return res.status(500).json({ message: 'Web warehouse creation failed' });
+  }
+};
+
+const getAllWarehousesWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await getAllWarehouses(req, res);
+  } catch (error) {
+    console.error('Web get all warehouses error:', error);
+    return res.status(500).json({ message: 'Failed to fetch warehouses for web' });
+  }
+};
+
+const getWarehouseByIdWeb = async (req, res) => {
+  try {
+    // Extract the ID from the web route and add it to params
+    req.params.id = req.params.id;
+    return await getWarehouseById(req, res);
+  } catch (error) {
+    console.error('Web get warehouse by ID error:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'Invalid warehouse ID format' });
+    }
+    return res.status(500).json({ message: 'Failed to fetch warehouse for web' });
+  }
+};
+
+const updateWarehouseWeb = async (req, res) => {
+  try {
+    // Ensure the ID is properly passed from the web route
+    req.params.id = req.params.id;
+    return await updateWarehouse(req, res);
+  } catch (error) {
+    console.error('Web update warehouse error:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'Invalid warehouse ID format' });
+    }
+    return res.status(500).json({ message: 'Web warehouse update failed' });
+  }
+};
+
+const deleteWarehouseWeb = async (req, res) => {
+  try {
+    // Ensure the ID is properly passed from the web route
+    req.params.id = req.params.id;
+    return await deleteWarehouse(req, res);
+  } catch (error) {
+    console.error('Web delete warehouse error:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'Invalid warehouse ID format' });
+    }
+    return res.status(500).json({ message: 'Web warehouse deletion failed' });
+  }
+};
+
 module.exports = {
+  // Mobile exports
   createWarehouse,
   getAllWarehouses,
   getWarehouseById,
   updateWarehouse,
   deleteWarehouse,
+  
+  // Web exports
+  createWarehouseWeb,
+  getAllWarehousesWeb,
+  getWarehouseByIdWeb,
+  updateWarehouseWeb,
+  deleteWarehouseWeb
 };

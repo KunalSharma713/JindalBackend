@@ -1,17 +1,24 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { generateBarcodes, getAllBarcodes } = require('../controllers/PalletBarcodeController');
-const verifyToken = require('../utils/VerifyToken');
+const {
+  // Mobile pallet barcode controllers
+  generateBarcodes,
+  getAllBarcodes,
 
-// Protect the route
+  // Web pallet barcode controllers
+  generateBarcodesWeb,
+  getAllBarcodesWeb,
+} = require("../controllers/PalletBarcodeController");
+
+const verifyToken = require("../utils/VerifyToken");
+
 router.use(verifyToken);
+// Mobile pallet barcode routes (existing)
+router.post("/generate", generateBarcodes);
+router.get("/", getAllBarcodes);
 
-// Route to generate new barcodes
-// e.g., POST /api/pallet-barcode/generate?count=10
-router.post('/generate', generateBarcodes);
-
-// Route to get all barcodes with filtering, sorting, and pagination
-// e.g., GET /api/pallet-barcode?status=new&search=DCIV&sortBy=createdAt&sortOrder=asc
-router.get('/', getAllBarcodes);
+// Web pallet barcode routes (new)
+router.post("/web/generate", generateBarcodesWeb);
+router.get("/web", getAllBarcodesWeb);
 
 module.exports = router;

@@ -1,21 +1,37 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 const {
-    createWarehouse,
-    getAllWarehouses,
-    getWarehouseById,
-    updateWarehouse,
-    deleteWarehouse
-} = require('../controllers/WarehouseController');
-const verifyToken = require('../utils/VerifyToken');
+  // Mobile warehouse controllers
+  createWarehouse,
+  getAllWarehouses,
+  getWarehouseById,
+  updateWarehouse,
+  deleteWarehouse,
 
-// Protect all warehouse routes
+  // Web warehouse controllers
+  createWarehouseWeb,
+  getAllWarehousesWeb,
+  getWarehouseByIdWeb,
+  updateWarehouseWeb,
+  deleteWarehouseWeb,
+} = require("../controllers/WarehouseController");
+
+const verifyToken = require("../utils/VerifyToken");
+
 router.use(verifyToken);
 
-router.post('/', createWarehouse);
-router.get('/', getAllWarehouses);
-router.get('/:id', getWarehouseById);
-router.put('/:id', updateWarehouse);
-router.delete('/:id', deleteWarehouse);
+// Web warehouse routes (must come before parameterized routes)
+router.post("/web", createWarehouseWeb);
+router.get("/web", getAllWarehousesWeb);
+router.get("/web/:id", getWarehouseByIdWeb);
+router.put("/web/:id", updateWarehouseWeb);
+router.delete("/web/:id", deleteWarehouseWeb);
+
+// Mobile warehouse routes
+router.post("/", createWarehouse);
+router.get("/", getAllWarehouses);
+router.get("/:id", getWarehouseById);
+router.put("/:id", updateWarehouse);
+router.delete("/:id", deleteWarehouse);
 
 module.exports = router;

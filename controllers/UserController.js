@@ -131,13 +131,10 @@ const updateUser = async (req, res) => {
 
     updateFields.updated_at = new Date();
 
-    const user = await User.findByIdAndUpdate(
-      id,
-      updateFields,
-      {
-        new: true,
-        runValidators: true,
-      })
+    const user = await User.findByIdAndUpdate(id, updateFields, {
+      new: true,
+      runValidators: true,
+    })
       .populate("roleid", "name slug")
       .populate("warehouse", "name location")
       .select("-password");
@@ -243,13 +240,18 @@ const getAllUsers = async (req, res) => {
 
     // Require warehouse filter for all requests
     if (!req.query.warehouse) {
-      return res.status(400).json({
+      return res.status(403).json({
         message: "Warehouse ID is required for user listing.",
       });
     }
 
-    // Always apply warehouse filter
-    filter.warehouse = req.query.warehouse;
+    if (!mongoose.Types.ObjectId.isValid(req.query.warehouse)) {
+      return res.status(400).json({
+        message: "Invalid warehouse ID.",
+      });
+    }
+
+    filter.warehouse = new mongoose.Types.ObjectId(req.query.warehouse);
 
     // Additional filters
     if (req.query.username) {
@@ -330,17 +332,6 @@ const getUser = async (req, res) => {
       error: error.message,
     });
   }
-
-  const user = await User.findOne(query)
-    .populate("roleid", "name slug")
-    .populate("warehouse", "name location")
-    .select("-password");
-
-  if (!user) {
-    return res.status(404).json({ message: "User not found." });
-  }
-
-  res.json({ message: "User found.", user });
 };
 
 // Delete a user by ID
@@ -363,7 +354,81 @@ const deleteUser = async (req, res) => {
   }
 };
 
+// Web-specific controllers
+const createUserWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await createUser(req, res);
+  } catch (error) {
+    console.error("Web user creation error:", error);
+    return res.status(500).json({ message: "Web user creation failed" });
+  }
+};
+
+const getAllUsersWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await getAllUsers(req, res);
+  } catch (error) {
+    console.error("Web get all users error:", error);
+    return res.status(500).json({ message: "Failed to fetch users for web" });
+  }
+};
+
+const getUserWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await getUser(req, res);
+  } catch (error) {
+    console.error("Web get user error:", error);
+    return res.status(500).json({ message: "Failed to fetch user for web" });
+  }
+};
+
+const updateUserWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await updateUser(req, res);
+  } catch (error) {
+    console.error("Web update user error:", error);
+    return res.status(500).json({ message: "Web user update failed" });
+  }
+};
+
+const updateUserRoleWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await updateUserRole(req, res);
+  } catch (error) {
+    console.error("Web update user role error:", error);
+    return res.status(500).json({ message: "Web user role update failed" });
+  }
+};
+
+const updateUserWarehouseWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await updateUserWarehouse(req, res);
+  } catch (error) {
+    console.error("Web update user warehouse error:", error);
+    return res
+      .status(500)
+      .json({ message: "Web user warehouse update failed" });
+  }
+};
+
+const deleteUserWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await deleteUser(req, res);
+  } catch (error) {
+    console.error("Web delete user error:", error);
+    return res.status(500).json({ message: "Web user deletion failed" });
+  }
+};
+
 module.exports = {
+  // Mobile exports
   createUser,
   updateUser,
   updateUserRole,
@@ -371,4 +436,13 @@ module.exports = {
   getAllUsers,
   getUser,
   deleteUser,
+
+  // Web exports
+  createUserWeb,
+  getAllUsersWeb,
+  getUserWeb,
+  updateUserWeb,
+  updateUserRoleWeb,
+  updateUserWarehouseWeb,
+  deleteUserWeb,
 };

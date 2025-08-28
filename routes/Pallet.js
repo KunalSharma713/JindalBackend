@@ -1,30 +1,35 @@
 const express = require("express");
 const router = express.Router();
 const {
+  // Mobile pallet controllers
   putaway,
   getAllPallets,
   movePallets,
   getPickUpPallets,
   findPallet,
   pickupPallets,
-  getAllPalletsBarcode,
-  assignPallet,
-  updatePallet,
+
+  // Web pallet controllers
+  getAllPalletsBarcodeWeb,
+  assignPalletWeb,
+  updatePalletWeb,
 } = require("../controllers/PalletController");
+
 const verifyToken = require("../utils/VerifyToken");
 
-// Protect the route
 router.use(verifyToken);
-
-// Route for bulk pallet creation
+// Mobile pallet routes (existing)
 router.post("/putaway", putaway);
 router.get("/", getAllPallets);
-router.get("/all", getAllPalletsBarcode);
 router.post("/move", movePallets);
 router.get("/pickup", getPickUpPallets);
 router.post("/pickup", pickupPallets);
 router.get("/find", findPallet);
-router.post("/assign", assignPallet);
-router.put("/:id", updatePallet);
+
+// Web pallet routes (new)
+
+router.get("/web/all", getAllPalletsBarcodeWeb);
+router.post("/web/assign", assignPalletWeb);
+router.put("/web/:id", updatePalletWeb);
 
 module.exports = router;

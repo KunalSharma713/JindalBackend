@@ -69,7 +69,7 @@ const generateBarcodes = async (req, res) => {
   }
 
   if (!warehouseId) {
-    return res.status(400).json({ message: "Warehouse ID is required." });
+    return res.status(403).json({ message: "Warehouse ID is required." });
   }
 
   try {
@@ -95,7 +95,33 @@ const generateBarcodes = async (req, res) => {
   }
 };
 
+// Web-specific controllers
+const generateBarcodesWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await generateBarcodes(req, res);
+  } catch (error) {
+    console.error('Web generate barcodes error:', error);
+    return res.status(500).json({ message: 'Failed to generate barcodes for web' });
+  }
+};
+
+const getAllBarcodesWeb = async (req, res) => {
+  try {
+    // Add web-specific logic here if needed
+    return await getAllBarcodes(req, res);
+  } catch (error) {
+    console.error('Web get all barcodes error:', error);
+    return res.status(500).json({ message: 'Failed to fetch barcodes for web' });
+  }
+};
+
 module.exports = {
+  // Mobile exports
   generateBarcodes,
   getAllBarcodes,
+  
+  // Web exports
+  generateBarcodesWeb,
+  getAllBarcodesWeb
 };
