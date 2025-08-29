@@ -20,14 +20,15 @@ const createUser = async (req, res) => {
   if (
     !username ||
     !email ||
-    !password ||
     !first_name ||
+    !last_name ||
+    !mobile_no ||
+    !password ||
     !roleid ||
     !warehouse
   ) {
     return res.status(400).json({
-      message:
-        "Please provide all required fields: username, email, password, first_name, roleid, warehouse.",
+      message: "Please provide all required fields.!",
     });
   }
 
