@@ -470,8 +470,12 @@ const updatePasswordWeb = async (req, res) => {
       return res.status(401).json({ message: "Invalid old password." });
     }
 
-    user.password = await bcrypt.hash(newPassword, 10);
-    await user.save();
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await User.updateOne(
+      { _id: userId },
+      { $set: { password: hashedPassword } }
+    );
 
     res.json({ message: "Password updated successfully." });
   } catch (error) {

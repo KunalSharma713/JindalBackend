@@ -9,6 +9,7 @@ const {
   getLocationBarcodesWeb,
   getPalletBarcodesWeb,
   generateMultipleLocationBarcodesWeb,
+  generateMultiplePalletBarcodesWeb,
 } = require("../controllers/BarcodePrintController");
 
 const verifyToken = require("../utils/VerifyToken");
@@ -22,5 +23,6 @@ router.get("/pallets", getPalletBarcodes);
 router.get("/web/locations", getLocationBarcodesWeb);
 router.get("/web/pallets", getPalletBarcodesWeb);
 router.post("/web/locations/multiple", generateMultipleLocationBarcodesWeb);
+router.post("/web/pallets/multiple", generateMultiplePalletBarcodesWeb);
 
 module.exports = router;

@@ -290,7 +290,7 @@ const getPalletBarcodes = async (req, res) => {
 
 const getLocationBarcodesWeb = async (req, res) => {
   try {
-    const locationId = req.query.id; // Renamed for clarity
+    const locationId = req.query.id;
 
     if (!locationId) {
       return res.status(400).json({ message: "Location ID is required." });
@@ -540,23 +540,124 @@ const generateMultipleLocationBarcodesWeb = async (req, res) => {
 
 const getPalletBarcodesWeb = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const plant = req.query.plant || null; // expecting ObjectId as string
+    const barcodeId = req.query.id;
 
-    const filter = {};
-    if (plant) {
-      filter.warehouse = plant;
+    if (!barcodeId) {
+      return res.status(400).json({ message: "Barcode ID is required." });
     }
 
-    const totalItems = await PalletBarcode.countDocuments(filter);
-    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+    const pallet = await PalletBarcode.findById(barcodeId);
 
-    const pallets = await PalletBarcode.find(filter)
-      .skip((page - 1) * ITEMS_PER_PAGE)
-      .limit(ITEMS_PER_PAGE);
+    if (!pallet) {
+      return res.status(404).json({ message: "No barcodes found" });
+    }
 
-    console.log("First pallet data:", JSON.stringify(pallets[0], null, 2));
-    console.log("Available fields:", Object.keys(pallets[0]?._doc || {}));
+    const doc = new PDFDocument({
+      size: "A4",
+      margin: 30,
+      autoFirstPage: true,
+    });
+
+    // Handle PDF stream errors
+    doc.on("error", (err) => {
+      console.error("PDF generation error:", err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "PDF generation failed" });
+      }
+    });
+
+    doc.on("pageAdded", () => {
+      console.log("New page added to PDF");
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=pallet_barcodes.pdf`
+    );
+
+    res.on("error", (err) => {
+      console.error("Response stream error:", err);
+      doc.end();
+    });
+
+    doc.pipe(res);
+
+    let xPos = 50;
+    let yPos = 50;
+    const pageWidth = 595;
+    const pageMargin = 50;
+    const barcodeWidth = 230;
+    const barcodeHeight = 120;
+    const margin = 35;
+    const maxX = pageWidth - pageMargin - barcodeWidth;
+
+    try {
+      console.log("Processing pallet:", JSON.stringify(pallet._doc, null, 2));
+
+      // Try different possible field names
+      const barcodeText = pallet.barcode_key || pallet.barcode;
+
+      if (!barcodeText) {
+        console.error(
+          "No barcode found for pallet. Available fields:",
+          Object.keys(pallet._doc)
+        );
+        // Removed 'continue' — not inside a loop
+      } else {
+        console.log("Using barcode text:", barcodeText);
+        const barcodeBuffer = await generateBarcode(barcodeText);
+
+        if (!barcodeBuffer || barcodeBuffer.length === 0) {
+          console.error("Empty barcode buffer for:", barcodeText);
+        } else {
+          // Draw rounded rectangle border with padding
+          doc.roundedRect(xPos, yPos, barcodeWidth, barcodeHeight, 15).stroke();
+
+          // Add barcode image - centered in the box without any text
+          doc.image(barcodeBuffer, xPos + 15, yPos + 10, {
+            width: barcodeWidth - 30,
+            height: barcodeHeight - 20,
+          });
+
+          // Calculate next position
+          xPos += barcodeWidth + margin;
+
+          // New row after 2 items
+          if (xPos > maxX) {
+            xPos = 50;
+            yPos += barcodeHeight + margin;
+          }
+
+          // New page when reaching bottom
+          if (yPos > 750) {
+            doc.addPage();
+            xPos = 50;
+            yPos = 50;
+          }
+        }
+      }
+    } catch (barcodeError) {
+      console.error("Barcode generation error:", barcodeError);
+    }
+
+    console.log("Finalizing PDF document");
+    doc.end();
+  } catch (error) {
+    console.error("Controller error:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+};
+
+const generateMultiplePalletBarcodesWeb = async (req, res) => {
+  try {
+    const { barcodeIds } = req.body;
+
+    const objectIds = barcodeIds.map((id) => new mongoose.Types.ObjectId(id));
+
+    const pallets = await PalletBarcode.find({ _id: { $in: objectIds } });
 
     if (!pallets.length) {
       return res.status(404).json({ message: "No barcodes found" });
@@ -583,7 +684,7 @@ const getPalletBarcodesWeb = async (req, res) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=pallet_barcodes_page${page}.pdf`
+      `attachment; filename=pallet_barcodes.pdf`
     );
 
     res.on("error", (err) => {
@@ -593,7 +694,6 @@ const getPalletBarcodesWeb = async (req, res) => {
 
     doc.pipe(res);
 
-    // Layout settings for 2 items per row
     let xPos = 50;
     let yPos = 50;
     const pageWidth = 595;
@@ -608,52 +708,51 @@ const getPalletBarcodesWeb = async (req, res) => {
         console.log("Processing pallet:", JSON.stringify(pallet._doc, null, 2));
 
         // Try different possible field names
-        const barcodeText =
-          pallet.barcode_key || pallet.barcode || pallet.barcodeKey;
+        const barcodeText = pallet.barcode_key || pallet.barcode;
 
         if (!barcodeText) {
           console.error(
             "No barcode found for pallet. Available fields:",
             Object.keys(pallet._doc)
           );
-          continue;
-        }
+          // Removed 'continue' — not inside a loop
+        } else {
+          console.log("Using barcode text:", barcodeText);
+          const barcodeBuffer = await generateBarcode(barcodeText);
 
-        console.log("Using barcode text:", barcodeText);
-        const barcodeBuffer = await generateBarcode(barcodeText);
+          if (!barcodeBuffer || barcodeBuffer.length === 0) {
+            console.error("Empty barcode buffer for:", barcodeText);
+          } else {
+            // Draw rounded rectangle border with padding
+            doc
+              .roundedRect(xPos, yPos, barcodeWidth, barcodeHeight, 15)
+              .stroke();
 
-        if (!barcodeBuffer || barcodeBuffer.length === 0) {
-          console.error("Empty barcode buffer for:", barcodeText);
-          continue;
-        }
+            // Add barcode image - centered in the box without any text
+            doc.image(barcodeBuffer, xPos + 15, yPos + 10, {
+              width: barcodeWidth - 30,
+              height: barcodeHeight - 20,
+            });
 
-        // Draw rounded rectangle border with padding
-        doc.roundedRect(xPos, yPos, barcodeWidth, barcodeHeight, 15).stroke();
+            // Calculate next position
+            xPos += barcodeWidth + margin;
 
-        // Add barcode image - centered in the box without any text
-        doc.image(barcodeBuffer, xPos + 15, yPos + 10, {
-          width: barcodeWidth - 30,
-          height: barcodeHeight - 20,
-        });
+            // New row after 2 items
+            if (xPos > maxX) {
+              xPos = 50;
+              yPos += barcodeHeight + margin;
+            }
 
-        // Calculate next position
-        xPos += barcodeWidth + margin;
-
-        // New row after 2 items
-        if (xPos > maxX) {
-          xPos = 50;
-          yPos += barcodeHeight + margin;
-        }
-
-        // New page when reaching bottom
-        if (yPos > 750) {
-          doc.addPage();
-          xPos = 50;
-          yPos = 50;
+            // New page when reaching bottom
+            if (yPos > 750) {
+              doc.addPage();
+              xPos = 50;
+              yPos = 50;
+            }
+          }
         }
       } catch (barcodeError) {
         console.error("Barcode generation error:", barcodeError);
-        continue;
       }
     }
 
@@ -673,4 +772,5 @@ module.exports = {
   getLocationBarcodesWeb,
   getPalletBarcodesWeb,
   generateMultipleLocationBarcodesWeb,
+  generateMultiplePalletBarcodesWeb,
 };
