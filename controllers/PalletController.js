@@ -912,6 +912,103 @@ const updatePalletWeb = async (req, res) => {
   }
 };
 
+const pickupPalletsWeb = async (req, res) => {
+  console.log(
+    "Pickup Pallets API called with body:",
+    JSON.stringify(req.body, null, 2)
+  );
+
+  const { pallets } = req.body;
+
+  // Validate the request body
+  if (!pallets || !Array.isArray(pallets) || pallets.length === 0) {
+    return res.status(400).json({
+      message:
+        "Invalid request. Please provide a non-empty array of pallets with quantity and barcode.",
+    });
+  }
+
+  const session = await mongoose.startSession();
+  console.log("📝 Starting pickup transaction");
+
+  try {
+    await session.withTransaction(async () => {
+      const updatePromises = pallets.map(async ({ quantity, barcode }) => {
+        console.log(
+          `🏷️ Processing pickup - Barcode: ${barcode}, Quantity: ${quantity}`
+        );
+
+        if (!quantity || !barcode) {
+          throw new Error(`Missing quantity or barcode for a pallet.`);
+        }
+
+        const palletBarcodeDoc = await PalletBarcode.findOne({
+          barcode_key: barcode,
+        }).session(session);
+
+        if (!palletBarcodeDoc) {
+          throw new Error(`Pallet barcode '${barcode}' not found.`);
+        }
+
+        const update = {
+          $inc: { quantity: -quantity },
+          $set: { last_moved_date: new Date() },
+        };
+
+        const pallet = await Pallet.findOneAndUpdate(
+          {
+            pallet_barcode: palletBarcodeDoc._id,
+            quantity: { $gte: quantity },
+          },
+          update,
+          { new: true, session }
+        );
+
+        if (!pallet) {
+          throw new Error(
+            `Pallet with barcode '${barcode}' not found or has insufficient quantity.`
+          );
+        }
+
+        console.log("✅ Pallet picked successfully:", pallet._id);
+
+        if (pallet.quantity <= 0) {
+          await Pallet.updateOne(
+            { _id: pallet._id },
+            { $set: { location: null } },
+            { session }
+          );
+
+          await PalletBarcode.updateOne(
+            { _id: palletBarcodeDoc._id },
+            { $set: { status: "used" } },
+            { session }
+          );
+        }
+      });
+
+      await Promise.all(updatePromises);
+
+      console.log("💾 Pickup transaction completed successfully");
+
+      res.status(200).json({
+        message: "Pallets picked up and quantities updated successfully.",
+      });
+    });
+  } catch (error) {
+    console.error("❌ Pickup pallets error:", error);
+
+    if (!res.headersSent) {
+      res.status(500).json({
+        message: "Server error during pallet pickup.",
+        error: error.message,
+      });
+    }
+  } finally {
+    session.endSession();
+  }
+};
+
 module.exports = {
   // Mobile exports
   putaway,
@@ -925,4 +1022,5 @@ module.exports = {
   getAllPalletsBarcodeWeb,
   assignPalletWeb,
   updatePalletWeb,
+  pickupPalletsWeb,
 };

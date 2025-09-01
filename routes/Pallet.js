@@ -13,6 +13,7 @@ const {
   getAllPalletsBarcodeWeb,
   assignPalletWeb,
   updatePalletWeb,
+  pickupPalletsWeb,
 } = require("../controllers/PalletController");
 
 const verifyToken = require("../utils/VerifyToken");
@@ -31,5 +32,6 @@ router.get("/find", findPallet);
 router.get("/web/all", getAllPalletsBarcodeWeb);
 router.post("/web/assign", assignPalletWeb);
 router.put("/web/:id", updatePalletWeb);
+router.post("/web/pickup", pickupPalletsWeb);
 
 module.exports = router;
