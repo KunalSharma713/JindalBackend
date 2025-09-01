@@ -929,13 +929,13 @@ const pickupPalletsWeb = async (req, res) => {
   }
 
   const session = await mongoose.startSession();
-  console.log("📝 Starting pickup transaction");
+  console.log("Starting pickup transaction");
 
   try {
     await session.withTransaction(async () => {
       const updatePromises = pallets.map(async ({ quantity, barcode }) => {
         console.log(
-          `🏷️ Processing pickup - Barcode: ${barcode}, Quantity: ${quantity}`
+          `Processing pickup - Barcode: ${barcode}, Quantity: ${quantity}`
         );
 
         if (!quantity || !barcode) {
@@ -970,7 +970,7 @@ const pickupPalletsWeb = async (req, res) => {
           );
         }
 
-        console.log("✅ Pallet picked successfully:", pallet._id);
+        console.log("Pallet picked successfully:", pallet._id);
 
         if (pallet.quantity <= 0) {
           await Pallet.updateOne(
@@ -989,14 +989,14 @@ const pickupPalletsWeb = async (req, res) => {
 
       await Promise.all(updatePromises);
 
-      console.log("💾 Pickup transaction completed successfully");
+      console.log("Pickup transaction completed successfully");
 
       res.status(200).json({
         message: "Pallets picked up and quantities updated successfully.",
       });
     });
   } catch (error) {
-    console.error("❌ Pickup pallets error:", error);
+    console.error("Pickup pallets error:", error);
 
     if (!res.headersSent) {
       res.status(500).json({
