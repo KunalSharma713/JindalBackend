@@ -1,7 +1,7 @@
 name: Deploy to EC2
 
 on:
-  workflow_dispatch:  # manual trigger only
+  workflow_dispatch:  # Manual trigger only
 
 jobs:
   deploy:
@@ -9,7 +9,7 @@ jobs:
     environment: production
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Deploy to EC2 via SSH
@@ -19,7 +19,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            set -e  # exit on error
+            set -e  # Exit on error
             echo "=========================================="
             echo "[DEPLOYMENT STARTED] $(date)"
             echo "=========================================="
@@ -28,7 +28,7 @@ jobs:
 
             if [ -d "$PROJECT_DIR/.git" ]; then
               echo "[INFO] Pulling latest code..."
-              cd $PROJECT_DIR
+              cd "$PROJECT_DIR"
               git reset --hard
               git pull origin main || { echo "[ERROR] Git pull failed"; exit 1; }
             else
@@ -37,17 +37,16 @@ jobs:
             fi
 
             echo "[INFO] Updating environment file..."
-            if [ -f env.production.template ]; then
-              cp env.production.template .env.production
+            if [ -f .env.production.template ]; then
+              cp .env.production.template .env.production
               echo "[INFO] .env.production updated successfully"
             else
-              echo "[ERROR] env.production.template missing"; exit 1;
+              echo "[ERROR] .env.production.template missing"; exit 1;
             fi
 
             echo "[INFO] Installing dependencies..."
-            npm install  || { echo "[ERROR] NPM install failed"; exit 1; }
+            npm install || { echo "[ERROR] NPM install failed"; exit 1; }
 
-           
             echo "[INFO] Starting/Restarting PM2 service..."
             if pm2 describe pallet-pickup-prod > /dev/null; then
               pm2 restart pallet-pickup-prod || { echo "[ERROR] PM2 restart failed"; exit 1; }
