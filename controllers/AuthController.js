@@ -519,7 +519,7 @@ const forgotPassword = async (req, res) => {
 
     // Generate reset token and set expiry (1 hour from now)
     const resetToken = generateResetToken();
-    const resetTokenExpiry = Date.now() + 3600000; // 1 hour from now
+    const resetTokenExpiry = Date.now() + 3600000;
 
     // Save the token and expiry to the user document
     await User.updateOne(
