@@ -27,30 +27,32 @@ const BulkUploadRoutes = require("../routes/BulkUploadRoutes");
 // Initialize the Express app
 const app = express();
 
-// Middleware setup
-app.use(bodyParser.urlencoded({ extended: false })); // Parse URL-encoded payloads
-app.use(bodyParser.json()); // Parse JSON payloads
-
-// Enable CORS for all origins
 app.use(
   cors({
     origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// Middleware setup
+app.use(bodyParser.urlencoded({ extended: false })); // Parse URL-encoded payloads
+app.use(bodyParser.json()); // Parse JSON payloads
 
 const PORT = process.env.PORT || 5000;
 console.log("🚀 Server running on port", PORT);
 
 // Set CORS headers for all responses
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "OPTIONS, GET, POST, PUT, PATCH, DELETE"
-  );
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  next();
-});
+
+// app.use((req, res, next) => {
+//   res.setHeader("Access-Control-Allow-Origin", "*");
+//   res.setHeader(
+//     "Access-Control-Allow-Methods",
+//     "OPTIONS, GET, POST, PUT, PATCH, DELETE"
+//   );
+//   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+//   next();
+// });
 
 // API route definitions
 app.use("/api/auth", authRoutes);
