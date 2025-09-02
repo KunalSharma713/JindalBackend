@@ -29,8 +29,8 @@ jobs:
             if [ -d "$PROJECT_DIR/.git" ]; then
               echo "[INFO] Pulling latest code..."
               cd "$PROJECT_DIR"
-              git reset --hard
-              git pull origin main || { echo "[ERROR] Git pull failed"; exit 1; }
+              git fetch origin
+              git reset --hard origin/main || { echo "[ERROR] Git pull failed"; exit 1; }
             else
               echo "[ERROR] $PROJECT_DIR is not a valid git repository"
               exit 1
