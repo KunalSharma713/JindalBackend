@@ -34,11 +34,11 @@ jobs:
               exit 1
             fi
             echo "[INFO] Updating environment file..."
-            if [ -f .env.production.template ]; then
-              cp .env.production.template .env.production
+            if [ -f env.production.template ]; then
+              cp env.production.template .env.production
               echo "[INFO] .env.production updated successfully"
             else
-              echo "[ERROR] .env.production.template missing"; exit 1;
+              echo "[ERROR] env.production.template missing"; exit 1;
             fi
             echo "[INFO] Installing dependencies..."
             npm install || { echo "[ERROR] NPM install failed"; exit 1; }
