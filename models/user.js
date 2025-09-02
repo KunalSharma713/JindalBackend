@@ -45,6 +45,17 @@ const userSchema = new Schema({
     type: Date,
     default: Date.now,
   },
+  resetPasswordToken: {
+    type: String,
+    default: null,
+  },
+  resetPasswordExpires: {
+    type: Date,
+    default: null,
+  },
 });
+
+// Add index for reset token for faster lookups
+userSchema.index({ resetPasswordToken: 1, resetPasswordExpires: 1 });
 
 module.exports = mongoose.model("Users", userSchema);

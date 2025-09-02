@@ -7,6 +7,8 @@ const {
   refreshAccessToken,
   logoutUser,
   updatePassword,
+  forgotPassword,
+  resetPassword,
 
   // Web auth controllers
   registerUserWeb,
@@ -31,5 +33,9 @@ router.post("/web/login", loginUserWeb);
 router.post("/web/refresh", refreshAccessTokenWeb);
 router.post("/web/logout", logoutUserWeb);
 router.put("/web/update-password", verifyToken, updatePasswordWeb);
+
+// Password reset routes
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 
 module.exports = router;
