@@ -23,19 +23,16 @@ jobs:
             echo "=========================================="
             echo "[DEPLOYMENT STARTED] $(date)"
             echo "=========================================="
-
             PROJECT_DIR=~/pallet_pickup_production/Store-Plate-backend
-
             if [ -d "$PROJECT_DIR/.git" ]; then
               echo "[INFO] Pulling latest code..."
               cd "$PROJECT_DIR"
               git fetch origin
-              git reset --hard origin/main || { echo "[ERROR] Git pull failed"; exit 1; }
+              git reset --hard origin/main || { echo "[ERROR] Git reset failed"; exit 1; }
             else
               echo "[ERROR] $PROJECT_DIR is not a valid git repository"
               exit 1
             fi
-
             echo "[INFO] Updating environment file..."
             if [ -f .env.production.template ]; then
               cp .env.production.template .env.production
@@ -43,18 +40,15 @@ jobs:
             else
               echo "[ERROR] .env.production.template missing"; exit 1;
             fi
-
             echo "[INFO] Installing dependencies..."
             npm install || { echo "[ERROR] NPM install failed"; exit 1; }
-
             echo "[INFO] Starting/Restarting PM2 service..."
             if pm2 describe pallet-pickup-prod > /dev/null; then
-              pm2 restart pallet-pickup-prod || { echo "[ERROR] PM2 restart failed"; exit 1; }
+              pm2 restart pallet-pickup-prod --update-env || { echo "[ERROR] PM2 restart failed"; exit 1; }
             else
               pm2 start npm --name "pallet-pickup-prod" -- run ec2 || { echo "[ERROR] PM2 start failed"; exit 1; }
               pm2 save
             fi
-
             echo "=========================================="
             echo "[DEPLOYMENT FINISHED SUCCESSFULLY] $(date)"
             echo "=========================================="
