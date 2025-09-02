@@ -460,10 +460,10 @@ const sendPasswordResetEmail = async (email, resetToken) => {
     );
 
     const transporter = nodemailer.createTransport({
-      service: process.env.SMTP_SERVICE || 'gmail',
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      service: process.env.SMTP_SERVICE || "gmail",
+      host: process.env.SMTP_HOST || "smtp.gmail.com",
       port: parseInt(process.env.SMTP_PORT) || 587,
-      secure: process.env.SMTP_SECURE === 'true',
+      secure: process.env.SMTP_SECURE === "true",
       auth: {
         user: process.env.SMTP_EMAIL,
         pass: process.env.SMTP_PASSWORD,
@@ -491,10 +491,10 @@ const sendPasswordResetEmail = async (email, resetToken) => {
     };
 
     await transporter.sendMail(mailOptions);
-    return true;
+    return { delivered: true };
   } catch (error) {
     console.error("Error sending password reset email:", error);
-    return false;
+    return { delivered: false, error };
   }
 };
 
@@ -533,16 +533,18 @@ const forgotPassword = async (req, res) => {
     );
 
     // Send email with reset link
-    await sendPasswordResetEmail(user.email, resetToken);
+    let sendRes = await sendPasswordResetEmail(user.email, resetToken);
 
     res.json({
       message:
         "If an account with that email exists, a password reset link has been sent.",
+      sendRes,
     });
   } catch (error) {
     console.error("Forgot password error:", error);
     res.status(500).json({
       message: "An error occurred while processing your request.",
+      error,
     });
   }
 };
