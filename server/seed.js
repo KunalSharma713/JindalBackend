@@ -78,12 +78,12 @@ async function seed() {
 
     const hashedPassword = await bcrypt.hash("Root@123", 10);
     const superAdminUser = new User({
-      email: "rohit@gmail.com",
+      email: "jindalsuperadmin@yopmail.com",
       password: hashedPassword,
       roleid: adminRole._id,
-      first_name: "Rohit",
-      last_name: "Todwal",
-      username: "rohittodwal123",
+      first_name: "Super",
+      last_name: "Admin",
+      username: "superadmin",
     });
 
     superAdminUser._roleSlug = adminRole.slug;
