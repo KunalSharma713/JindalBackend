@@ -2,10 +2,6 @@
 
 This is the official backend for the Store-Plate application, a robust inventory and warehouse management system built with Node.js, Express, and MongoDB. It provides a secure and scalable foundation for managing users, roles, warehouses, and locations with custom business logic.
 
-## Deployment
-
-[![Deploy to Vercel](https://vercel.com/button)](https://api.vercel.com/v1/integrations/deploy/prj_BJ7n30m1oi9X54HWS5FOG6hm3BcU/ta06l6PHr9)
-
 ## Features
 
 - **Secure Authentication**: JWT-based authentication (Access & Refresh Tokens) with endpoints for registration, login, logout, and password updates.
@@ -28,7 +24,7 @@ Follow these instructions to get a copy of the project up and running on your lo
 
 1.  **Clone the repository:**
     ```sh
-    git clone https://github.com/your-username/Store-Plate-backend.git
+    git clone https://github.com/KunalSharma713/JindalBackend.git
     cd Store-Plate-backend
     ```
 
