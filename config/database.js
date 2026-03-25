@@ -23,23 +23,23 @@ const connectDB = () => {
     return new Promise((resolve, reject) => {
         mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
             .then(() => {
-                console.log('✅ MongoDB connected');
+                console.log('MongoDB connected');
                 // Initialize all models after connection
                 initModels();
                 resolve();
             })
             .catch((err) => {
-                console.error('❌ MongoDB connection failed:', err);
+                console.error('MongoDB connection failed:', err);
                 reject(err);
             });
 
         // Handle connection events
         mongoose.connection.on('disconnected', () => {
-            console.log('🔴 MongoDB disconnected');
+            console.log('MongoDB disconnected');
         });
 
         mongoose.connection.on('error', (err) => {
-            console.error('🔴 MongoDB error:', err);
+            console.error('MongoDB error:', err);
         });
 
         // Update process termination handler
