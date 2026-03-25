@@ -31,32 +31,31 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: false })); // Parse URL-encoded payloads
 app.use(bodyParser.json()); // Parse JSON payloads
 
-// Configure CORS with specific allowed origins and credentials
-// const allowedOrigins = [
-//   'https://store-plate-frontend.vercel.app',
-//   'http://localhost:3000',
-//   'http://localhost:5000'
-// ];
+// Configure CORS to allow frontend
+const allowedOrigins = [
+  'https://jindal-frontend-three.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5000'
+];
 
-// app.use(
-//   cors({
-//     origin: function (origin, callback) {
-//       // Allow requests with no origin (like mobile apps or curl requests)
-//       if (!origin) return callback(null, true);
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
 
-//       if (allowedOrigins.indexOf(origin) === -1) {
-//         const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-//         return callback(new Error(msg), false);
-//       }
-//       return callback(null, true);
-//     },
-//     credentials: true,
-//     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-//     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
-//   })
-// );
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+  })
+);
 
-app.use(cors());
 const PORT = process.env.PORT || 5000;
 console.log("Server running on port", PORT);
 
