@@ -34,27 +34,34 @@ app.use(bodyParser.json()); // Parse JSON payloads
 // Configure CORS to allow frontend
 const allowedOrigins = [
   'https://jindal-frontend-three.vercel.app',
+  'https://your-actual-frontend-url.vercel.app', // Replace with your actual frontend URL
   'http://localhost:3000',
   'http://localhost:5000'
 ];
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
+// For development, allow all origins
+const corsOptions = process.env.NODE_ENV === 'production' 
+  ? {
+      origin: function (origin, callback) {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) === -1) {
+          const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+          return callback(new Error(msg), false);
+        }
+        return callback(null, true);
+      },
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+    }
+  : {
+      origin: true,
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+    };
 
-      if (allowedOrigins.indexOf(origin) === -1) {
-        const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-        return callback(new Error(msg), false);
-      }
-      return callback(null, true);
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
-  })
-);
+app.use(cors(corsOptions));
 
 const PORT = process.env.PORT || 5000;
 console.log("Server running on port", PORT);
@@ -69,7 +76,6 @@ app.use("/api/pallet-barcode", palletBarcodeRoutes);
 app.use("/api/pallet", palletRoutes);
 app.use("/api/barcode-print", barcodePrintRoutes);
 app.use("/api/bulkupload", BulkUploadRoutes);
-app.use("/api/ai", aiRoutes);
 app.get("/", (req, res) => {
   res.send("Hello, This is main branch");
 });
