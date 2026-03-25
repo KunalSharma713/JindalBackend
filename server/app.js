@@ -34,7 +34,6 @@ app.use(bodyParser.json()); // Parse JSON payloads
 // Configure CORS to allow frontend
 const allowedOrigins = [
   'https://jindal-frontend-three.vercel.app',
-  'https://your-actual-frontend-url.vercel.app', // Replace with your actual frontend URL
   'http://localhost:3000',
   'http://localhost:5000'
 ];
